@@ -14,13 +14,25 @@ st.set_page_config(
 )
 
 # --- Funções de Carregamento em Cache ---
+# --- Funções de Carregamento em Cache ---
 @st.cache_resource
 def load_model(caminho_modelo):
-    """Carrega o pipeline treinado a partir de um ficheiro .pkl."""
+    """Carrega o pipeline treinado a partir de um ficheiro .pkl com tratamento de erros melhorado."""
     try:
-        # Usamos joblib.load() que é o padrão para carregar modelos scikit-learn
-        return joblib.load(caminho_modelo)
+        modelo = joblib.load(caminho_modelo)
+        return modelo
     except FileNotFoundError:
+        st.error(f"ERRO: Ficheiro do modelo '{caminho_modelo}' não encontrado. Verifique o nome e se ele está no repositório.")
+        return None
+    except Exception as e:
+        st.error(f"""
+        ERRO AO CARREGAR O MODELO: Ocorreu um erro ao tentar carregar o ficheiro '{caminho_modelo}'.
+        Isto geralmente acontece por uma incompatibilidade de versões de bibliotecas (ex: scikit-learn) entre o ambiente onde o modelo foi treinado e o ambiente do Streamlit.
+
+        **Erro detalhado:** {e}
+
+        **Ação Sugerida:** Verifique se o seu ficheiro 'requirements.txt' contém as versões exatas das bibliotecas usadas no treino, especialmente 'scikit-learn' e 'imbalanced-learn'.
+        """)
         return None
 
 @st.cache_data
