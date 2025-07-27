@@ -27,25 +27,25 @@ OPTIMAL_THRESHOLD = 0.42
 # --- Funções de Carregamento ---
 @st.cache_resource
 def load_model(caminho_modelo):
-
-try:
-   return joblib.load(caminho_modelo)
-   except Exception as e:
-   st.error(f"ERRO AO CARREGAR O MODELO: Verifique o nome do ficheiro e as dependências. Erro: {e}")
-   return None
+    """Carrega o pipeline completo com ExtraTrees"""
+    try:
+        return joblib.load(caminho_modelo)
+    except Exception as e:
+        st.error(f"ERRO AO CARREGAR O MODELO: Verifique o nome do ficheiro e as dependências. Erro: {e}")
+        return None
 
 @st.cache_data
 def load_data(caminho_dados):
-
-try:
-   dados = pd.read_csv(caminho_dados)
-   # Pré-processamento básico
-   dados['RDS'] = dados['RDS'].astype(str).str.replace('%', '', regex=False)
-   dados['RDS'] = pd.to_numeric(dados['RDS'], errors='coerce')
-   return dados
-   except Exception as e:
-   st.error(f"ERRO AO CARREGAR OS DADOS: Verifique o nome do ficheiro '{caminho_dados}'. Erro: {e}")
-   return None
+    """Carrega os dados para a análise exploratória."""
+    try:
+        dados = pd.read_csv(caminho_dados)
+        # Pré-processamento básico
+        dados['RDS'] = dados['RDS'].astype(str).str.replace('%', '', regex=False)
+        dados['RDS'] = pd.to_numeric(dados['RDS'], errors='coerce')
+        return dados
+    except Exception as e:
+        st.error(f"ERRO AO CARREGAR OS DADOS: Verifique o nome do ficheiro '{caminho_dados}'. Erro: {e}")
+        return None
 
 
 # --- Barra Lateral e Carregamento dos Ficheiros ---
