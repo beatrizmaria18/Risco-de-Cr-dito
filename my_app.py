@@ -195,6 +195,7 @@ elif pagina == "🧠 Detalhes do Modelo":
         fig_pr.update_layout(title='Curva de Precisão vs. Recall (Exemplo)', xaxis_title='Recall', yaxis_title='Precisão')
         st.plotly_chart(fig_pr, use_container_width=True)
 
+
 # PÁGINA 4: SIMULADOR DE RISCO
 elif pagina == "⚙️ Simulador de Risco":
     st.title("⚙️ Simulador Interativo de Risco de Crédito")
