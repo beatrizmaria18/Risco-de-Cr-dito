@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Funções de Carregamento ---
+# --- Funções de Carregamento e Pré-processamento ---
 @st.cache_resource
 def load_model(caminho_modelo):
     """Carrega o modelo treinado a partir de um ficheiro .pkl."""
@@ -32,12 +32,33 @@ def load_data(caminho_dados):
         st.error(f"ERRO AO CARREGAR OS DADOS: Verifique o nome do ficheiro '{caminho_dados}'. Erro: {e}")
         return None
 
+def preprocess_for_prediction(df_to_predict, reference_df):
+    """
+    Prepara um DataFrame para previsão, aplicando One-Hot Encoding
+    e alinhando as colunas com base num DataFrame de referência.
+    """
+    # Identifica colunas categóricas do DataFrame de referência
+    categorical_features = reference_df.select_dtypes(include=['object']).columns
+    if 'Cliente' in categorical_features:
+        categorical_features = categorical_features.drop('Cliente')
+
+    # Aplica get_dummies ao DataFrame de entrada
+    df_processed = pd.get_dummies(df_to_predict, columns=categorical_features, dummy_na=False)
+
+    # Cria colunas dummy a partir do DataFrame de referência para obter o conjunto completo de colunas
+    reference_processed = pd.get_dummies(reference_df.drop('Cliente', axis=1), columns=categorical_features, dummy_na=False)
+
+    # Alinha as colunas do df de entrada com as do df de referência, preenchendo com 0 as que faltarem
+    df_aligned = df_processed.reindex(columns=reference_processed.columns, fill_value=0)
+    
+    return df_aligned
+
 # --- Barra Lateral e Carregamento dos Ficheiros ---
 st.sidebar.title("🏦 Dashboard de Risco")
 st.sidebar.markdown("---")
 st.sidebar.header("Configuração de Ficheiros")
 
-caminho_modelo_pkl = st.sidebar.text_input("Nome do seu ficheiro de modelo:", "best.pkl")
+caminho_modelo_pkl = st.sidebar.text_input("Nome do seu ficheiro de modelo:", "meu_modelo.pkl")
 caminho_dados_csv = st.sidebar.text_input("Nome do seu ficheiro de dados:", "dados1.csv")
 
 model = load_model(caminho_modelo_pkl)
@@ -68,6 +89,7 @@ st.sidebar.info("Desenvolvido como uma ferramenta de suporte à decisão para an
 # --- Verificação de Erro ---
 if model is None or dados is None:
     st.stop()
+
 
 # --- Conteúdo das Páginas ---
 
@@ -131,8 +153,9 @@ elif pagina == "🧠 Detalhes do Modelo":
     try:
         X_raw = dados.drop('Cliente', axis=1)
         y_true = dados['Cliente'].map({'bom pagador': 0, 'mau pagador': 1})
-        y_pred = model.predict(X_raw)
-        y_proba = model.predict_proba(X_raw)[:, 1]
+        X_processed = preprocess_for_prediction(X_raw, dados)
+        y_pred = model.predict(X_processed)
+        y_proba = model.predict_proba(X_processed)[:, 1]
         cm = confusion_matrix(y_true, y_pred)
         precision_points, recall_points, _ = precision_recall_curve(y_true, y_proba)
         recall = recall_score(y_true, y_pred)
