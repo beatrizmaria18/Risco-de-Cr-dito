@@ -90,11 +90,14 @@ if pagina == "📊 Dashboard Geral":
     st.title("📊 Dashboard Geral do Modelo de Risco")
     st.markdown("Visão geral do desempenho do modelo e da distribuição dos dados.")
 
+    # --- A CORREÇÃO ESTÁ AQUI ---
+    # As métricas agora são dinâmicas e baseadas nos cálculos acima
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Recall do Modelo", "66.8%", "Foco Principal", help="Capacidade de identificar os 'maus pagadores'.")
-    col2.metric("Precisão do Modelo", "96.9%", "Alta Confiabilidade", help="Assertividade do modelo ao classificar um cliente como 'mau pagador'.")
-    col3.metric("Clientes no Dataset", f"{dados_filtrados.shape[0]}", "Total Analisado")
-    col4.metric("Taxa de Inadimplência", f"{(dados_filtrados['Cliente'] == 'mau pagador').mean():.2%}", "Observada")
+    col1.metric("Recall do Modelo", f"{recall:.2%}", help="Capacidade de identificar os 'maus pagadores'.")
+    col2.metric("Precisão do Modelo", f"{precision:.2%}", help="Assertividade do modelo ao classificar um cliente como 'mau pagador'.")
+    col3.metric("Acurácia Geral", f"{accuracy:.2%}", help="Percentual geral de acertos do modelo.")
+    col4.metric("Taxa de Inadimplência", f"{(dados_filtrados['Cliente'] == 'mau pagador').mean():.2%}", "Observada nos dados filtrados")
+    # --- FIM DA CORREÇÃO ---
 
     st.markdown("---")
 
@@ -102,6 +105,7 @@ if pagina == "📊 Dashboard Geral":
     cliente_counts = dados_filtrados['Cliente'].value_counts()
     fig_pie = px.pie(values=cliente_counts.values, names=cliente_counts.index, title='Proporção de Bons vs. Maus Pagadores', hole=.3)
     st.plotly_chart(fig_pie, use_container_width=True)
+
 
 # PÁGINA 2: ANÁLISE EXPLORATÓRIA
 elif pagina == "📈 Análise Exploratória":
@@ -140,34 +144,42 @@ elif pagina == "🧠 Detalhes do Modelo":
     tab_matriz, tab_curvas = st.tabs(["Matriz de Confusão", "Curvas de Performance"])
 
     with tab_matriz:
-        st.subheader("Matriz de Confusão")
+        st.subheader("Matriz de Confusão Dinâmica")
         
-        # Gerar a matriz de confusão dinamicamente com Plotly
-        # Usamos os valores da nossa última matriz de confusão bem-sucedida como exemplo
-        z = [[802, 4], [61, 123]]
+        # --- A CORREÇÃO ESTÁ AQUI ---
+        # A variável 'cm' já foi calculada dinamicamente no topo do script.
+        # Agora, usamos esses valores reais para gerar o gráfico.
+        z = cm.tolist()
         x = ['Bom Pagador (Previsto)', 'Mau Pagador (Previsto)']
         y = ['Bom Pagador (Real)', 'Mau Pagador (Real)']
-
+        
         # Inverter a ordem de 'y' para que 'Mau Pagador (Real)' fique em baixo, como é comum
         z.reverse()
         y.reverse()
-
-        fig_cm = plotly.figure_factory.create_annotated_heatmap(z, x=x, y=y, annotation_text=np.array(z).astype(str), colorscale='Greens')
-        fig_cm.update_layout(title_text='<i><b>Matriz de Confusão (Exemplo)</b></i>')
+        
+        fig_cm = create_annotated_heatmap(z, x=x, y=y, annotation_text=np.array(z).astype(str), colorscale='Greens')
+        fig_cm.update_layout(title_text='<i><b>Matriz de Confusão do Modelo Carregado</b></i>')
         st.plotly_chart(fig_cm, use_container_width=True)
+        # --- FIM DA CORREÇÃO ---
 
-        st.markdown("**Nota:** Esta é uma matriz de confusão de exemplo baseada no desempenho do modelo otimizado. A performance real do seu modelo pode ser diferente.")
-
+        st.markdown("""
+        Esta matriz de confusão é gerada **dinamicamente** com base no seu modelo `.pkl` e nos seus dados `.csv`.
+        - **Canto inferior direito (Verdadeiro Positivo):** Maus pagadores corretamente identificados.
+        - **Canto inferior esquerdo (Falso Negativo):** O erro mais caro. Maus pagadores que o modelo deixou passar.
+        """)
     with tab_curvas:
         st.subheader("Curva de Precisão vs. Recall (PR Curve)")
         st.info("Esta curva ajuda a visualizar o trade-off entre Precisão e Recall.")
-        recall_vals = np.linspace(0.6, 1.0, 100)
-        precision_vals = 0.97 - 0.4 * (recall_vals - 0.6) + np.random.normal(0, 0.02, 100)
+        
+        # --- A CORREÇÃO ESTÁ AQUI ---
+        # O gráfico agora é gerado com os dados reais calculados
         fig_pr = go.Figure()
-        fig_pr.add_trace(go.Scatter(x=recall_vals, y=precision_vals, mode='lines', name='Curva PR'))
-        fig_pr.add_trace(go.Scatter(x=[0.668], y=[0.969], mode='markers', marker=dict(color='red', size=12), name='Exemplo de Ponto Operacional'))
-        fig_pr.update_layout(title='Curva de Precisão vs. Recall (Exemplo)', xaxis_title='Recall', yaxis_title='Precisão')
+        fig_pr.add_trace(go.Scatter(x=recall_points, y=precision_points, mode='lines', name='Curva PR do Modelo'))
+        fig_pr.add_trace(go.Scatter(x=[recall], y=[precision], mode='markers', marker=dict(color='red', size=12), name='Ponto Operacional Atual'))
+        fig_pr.update_layout(title='Curva de Precisão vs. Recall Dinâmica', xaxis_title='Recall', yaxis_title='Precisão')
         st.plotly_chart(fig_pr, use_container_width=True)
+        # --- FIM DA CORREÇÃO ---
+
 
 # PÁGINA 4: SIMULADOR DE RISCO
 elif pagina == "⚙️ Simulador de Risco":
@@ -202,10 +214,18 @@ elif pagina == "⚙️ Simulador de Risco":
         input_data = pd.DataFrame(input_data_dict)
         
         # --- A CORREÇÃO ESTÁ AQUI ---
-        # Garantir que a ordem das colunas é a mesma que a do treino
-        X_train_columns = dados.drop('Cliente', axis=1).columns
-        input_data = input_data[X_train_columns]
+        # Obter a ordem das colunas diretamente do modelo treinado para garantir a correspondência.
+        try:
+            # A forma mais robusta é usar o atributo feature_names_in_ do pipeline
+            X_train_columns = pipeline.feature_names_in_
+            input_data = input_data[X_train_columns]
+        except AttributeError:
+            # Fallback para o caso de o modelo não ser um pipeline sklearn
+            st.warning("Não foi possível obter a ordem das features do modelo. Usando a ordem do CSV. Isso pode causar erros se não for idêntica.")
+            X_train_columns = dados.drop('Cliente', axis=1).columns
+            input_data = input_data[X_train_columns]
         # --- FIM DA CORREÇÃO ---
+
 
         prediction_proba = pipeline.predict_proba(input_data)[0]
         prob_mau_pagador = prediction_proba[1] 
