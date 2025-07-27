@@ -1,4 +1,4 @@
-t# Arquivo Único: app_final.py
+# Arquivo Único: app_final.py
 # ------------------------------------
 # OBJETIVO: Versão final com pré-processamento manual para garantir compatibilidade com o modelo.
 #
