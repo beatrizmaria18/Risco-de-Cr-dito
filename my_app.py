@@ -90,7 +90,6 @@ if pagina == "📊 Dashboard Geral":
     st.title("📊 Dashboard Geral do Modelo de Risco")
     st.markdown("Visão geral do desempenho do modelo e da distribuição dos dados.")
 
-    # Métricas Chave
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Recall do Modelo", "66.8%", "Foco Principal", help="Capacidade de identificar os 'maus pagadores'.")
     col2.metric("Precisão do Modelo", "96.9%", "Alta Confiabilidade", help="Assertividade do modelo ao classificar um cliente como 'mau pagador'.")
@@ -99,21 +98,28 @@ if pagina == "📊 Dashboard Geral":
 
     st.markdown("---")
 
-    # Gráficos do Dashboard
     col_a, col_b = st.columns([2, 1])
     with col_a:
         st.subheader("Importância das Variáveis (Features)")
         try:
-            # Tenta extrair a importância das features do pipeline
-            feature_names = pipeline.named_steps['preprocessor'].get_feature_names_out()
-            importances = pipeline.named_steps['classifier'].feature_importances_
-            feature_importance_df = pd.DataFrame({'feature': feature_names, 'importance': importances}).sort_values('importance', ascending=False).head(10)
-            
-            fig_imp = px.bar(feature_importance_df, x='importance', y='feature', orientation='h', title='Top 10 Variáveis Mais Influentes')
-            fig_imp.update_layout(yaxis={'categoryorder':'total ascending'})
-            st.plotly_chart(fig_imp, use_container_width=True)
+            # --- A CORREÇÃO ESTÁ AQUI ---
+            # Verifica se o objeto carregado é um pipeline antes de tentar aceder aos seus passos
+            if hasattr(pipeline, 'named_steps'):
+                feature_names = pipeline.named_steps['preprocessor'].get_feature_names_out()
+                importances = pipeline.named_steps['classifier'].feature_importances_
+                feature_importance_df = pd.DataFrame({'feature': feature_names, 'importance': importances})
+                
+                feature_importance_df = feature_importance_df.sort_values('importance', ascending=False).head(10)
+                fig_imp = px.bar(feature_importance_df, x='importance', y='feature', orientation='h', title='Top 10 Variáveis Mais Influentes')
+                fig_imp.update_layout(yaxis={'categoryorder':'total ascending'})
+                st.plotly_chart(fig_imp, use_container_width=True)
+            else:
+                # Se não for um pipeline, mostra uma mensagem de aviso
+                st.warning("Não é possível exibir a importância das features porque o ficheiro .pkl não contém o pipeline de pré-processamento. Para ver este gráfico, treine e salve o pipeline completo, não apenas o classificador.")
+            # --- FIM DA CORREÇÃO ---
         except Exception as e:
-            st.warning(f"Não foi possível extrair a importância das features do seu modelo. O pipeline pode ter uma estrutura diferente. Erro: {e}")
+            st.error(f"Ocorreu um erro ao tentar gerar o gráfico de importância das features: {e}")
+
 
     with col_b:
         st.subheader("Distribuição de Clientes")
@@ -139,8 +145,7 @@ elif pagina == "📈 Análise Exploratória":
         st.subheader("Relação entre duas variáveis numéricas")
         col_x = st.selectbox("Selecione a variável para o eixo X:", options=dados.select_dtypes(include=np.number).columns, index=0)
         col_y = st.selectbox("Selecione a variável para o eixo Y:", options=dados.select_dtypes(include=np.number).columns, index=1)
-        fig_scatter = px.scatter(dados_filtrados, x=col_x, y=col_y, color='Cliente',
-                                 title=f'{col_y} vs. {col_x}', hover_data=['Finalidade'])
+        fig_scatter = px.scatter(dados_filtrados, x=col_x, y=col_y, color='Cliente', title=f'{col_y} vs. {col_x}', hover_data=['Finalidade'], render_mode='svg')
         st.plotly_chart(fig_scatter, use_container_width=True)
 
     with tab3:
@@ -160,16 +165,28 @@ elif pagina == "🧠 Detalhes do Modelo":
 
     with tab_matriz:
         st.subheader("Matriz de Confusão")
-        st.image("https://i.imgur.com/zW2q2oX.png", caption="Matriz de Confusão de exemplo do Modelo Otimizado.", use_column_width=True)
-        st.markdown("""
-        **Nota:** Esta é uma imagem de exemplo. A performance real do seu modelo pode ser diferente.
-        - **Canto inferior esquerdo (Falso Negativo):** O erro mais caro. Maus pagadores que o modelo deixou passar. **O objetivo é minimizar este número.**
-        """)
+        
+        # --- A CORREÇÃO ESTÁ AQUI ---
+        # Gerar a matriz de confusão dinamicamente com Plotly
+        # Usamos os valores da nossa última matriz de confusão bem-sucedida como exemplo
+        z = [[802, 4], [61, 123]]
+        x = ['Bom Pagador (Previsto)', 'Mau Pagador (Previsto)']
+        y = ['Bom Pagador (Real)', 'Mau Pagador (Real)']
+
+        # Inverter a ordem de 'y' para que 'Mau Pagador (Real)' fique em baixo, como é comum
+        z.reverse()
+        y.reverse()
+
+        fig_cm = ff.create_annotated_heatmap(z, x=x, y=y, annotation_text=np.array(z).astype(str), colorscale='Greens')
+        fig_cm.update_layout(title_text='<i><b>Matriz de Confusão (Exemplo)</b></i>')
+        st.plotly_chart(fig_cm, use_container_width=True)
+        # --- FIM DA CORREÇÃO ---
+
+        st.markdown("**Nota:** Esta é uma matriz de confusão de exemplo baseada no desempenho do modelo otimizado. A performance real do seu modelo pode ser diferente.")
 
     with tab_curvas:
         st.subheader("Curva de Precisão vs. Recall (PR Curve)")
-        st.info("Esta curva ajuda a visualizar o trade-off entre Precisão e Recall. Idealmente, queremos estar no canto superior direito.")
-        # Simulação de uma curva PR para fins visuais
+        st.info("Esta curva ajuda a visualizar o trade-off entre Precisão e Recall.")
         recall_vals = np.linspace(0.6, 1.0, 100)
         precision_vals = 0.97 - 0.4 * (recall_vals - 0.6) + np.random.normal(0, 0.02, 100)
         fig_pr = go.Figure()
@@ -201,15 +218,23 @@ elif pagina == "⚙️ Simulador de Risco":
             lc_atual = st.slider("Linhas de Crédito Atuais", 0, 20, 5)
 
     if st.button("Analisar Risco do Cliente", type="primary"):
-        input_data = pd.DataFrame({
+        # Criar DataFrame com os dados do formulário
+        input_data_dict = {
             'Empréstimo': [emprestimo_valor], 'ValorDoBem': [valor_do_bem], 'Finalidade': [finalidade],
             'Emprego': [emprego], 'TempoEmprego': [tempo_emprego], 'Negativos': [negativos],
             'Atrasos': [atrasos], 'TempoCliente': [tempo_cliente], 'LC-Recente': [lc_recente],
             'LC-Atual': [lc_atual], 'RDS': [rds]
-        })
+        }
+        input_data = pd.DataFrame(input_data_dict)
+        
+        # --- A CORREÇÃO ESTÁ AQUI ---
+        # Garantir que a ordem das colunas é a mesma que a do treino
+        X_train_columns = dados.drop('Cliente', axis=1).columns
+        input_data = input_data[X_train_columns]
+        # --- FIM DA CORREÇÃO ---
 
         prediction_proba = pipeline.predict_proba(input_data)[0]
-        prob_mau_pagador = prediction_proba[1] # Assumindo que a classe 1 é 'mau pagador'
+        prob_mau_pagador = prediction_proba[1] 
 
         fig_gauge = go.Figure(go.Indicator(
             mode = "gauge+number", value = prob_mau_pagador * 100,
