@@ -5,7 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
 
-# --- Configuração da Página e Carregamento de Dados ---
+# --- Configuração da Página ---
 st.set_page_config(
     page_title="Dashboard de Risco de Crédito",
     page_icon="🏦",
@@ -13,26 +13,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Funções de Carregamento em Cache ---
-# --- Funções de Carregamento em Cache ---
+# --- Funções de Carregamento e Pré-processamento ---
 @st.cache_resource
 def load_model(caminho_modelo):
-    """Carrega o pipeline treinado a partir de um ficheiro .pkl com tratamento de erros melhorado."""
+    """Carrega o modelo treinado a partir de um ficheiro .pkl."""
     try:
-        modelo = joblib.load(caminho_modelo)
-        return modelo
-    except FileNotFoundError:
-        st.error(f"ERRO: Ficheiro do modelo '{caminho_modelo}' não encontrado. Verifique o nome e se ele está no repositório.")
-        return None
+        return joblib.load(caminho_modelo)
     except Exception as e:
-        st.error(f"""
-        ERRO AO CARREGAR O MODELO: Ocorreu um erro ao tentar carregar o ficheiro '{caminho_modelo}'.
-        Isto geralmente acontece por uma incompatibilidade de versões de bibliotecas (ex: scikit-learn) entre o ambiente onde o modelo foi treinado e o ambiente do Streamlit.
-
-        **Erro detalhado:** {e}
-
-        **Ação Sugerida:** Verifique se o seu ficheiro 'requirements.txt' contém as versões exatas das bibliotecas usadas no treino, especialmente 'scikit-learn' e 'imbalanced-learn'.
-        """)
+        st.error(f"ERRO AO CARREGAR O MODELO: Verifique o nome do ficheiro e as dependências. Erro: {e}")
         return None
 
 @st.cache_data
@@ -40,19 +28,41 @@ def load_data(caminho_dados):
     """Carrega os dados para a análise exploratória."""
     try:
         return pd.read_csv(caminho_dados)
-    except FileNotFoundError:
+    except Exception as e:
+        st.error(f"ERRO AO CARREGAR OS DADOS: Verifique o nome do ficheiro '{caminho_dados}'. Erro: {e}")
         return None
+
+def preprocess_for_prediction(df_to_predict, reference_df):
+    """
+    Prepara um DataFrame para previsão, aplicando One-Hot Encoding
+    e alinhando as colunas com base num DataFrame de referência.
+    Esta função é um workaround para quando o .pkl não contém o pipeline de pré-processamento.
+    """
+    # Identifica colunas categóricas do DataFrame de referência
+    categorical_features = reference_df.select_dtypes(include=['object']).columns
+    if 'Cliente' in categorical_features:
+        categorical_features = categorical_features.drop('Cliente')
+
+    # Aplica get_dummies ao DataFrame de entrada
+    df_processed = pd.get_dummies(df_to_predict, columns=categorical_features)
+
+    # Cria colunas dummy a partir do DataFrame de referência para obter o conjunto completo de colunas
+    reference_processed = pd.get_dummies(reference_df.drop('Cliente', axis=1), columns=categorical_features)
+
+    # Alinha as colunas do df de entrada com as do df de referência
+    df_aligned = df_processed.reindex(columns=reference_processed.columns, fill_value=0)
+    
+    return df_aligned
 
 # --- Barra Lateral e Carregamento dos Ficheiros ---
 st.sidebar.title("🏦 Dashboard de Risco")
 st.sidebar.markdown("---")
 st.sidebar.header("Configuração de Ficheiros")
 
-# Peça ao utilizador para fornecer os nomes dos ficheiros
-caminho_modelo_pkl = st.sidebar.text_input("Nome do seu ficheiro de modelo:", "best.pkl")
+caminho_modelo_pkl = st.sidebar.text_input("Nome do seu ficheiro de modelo:", "meu_modelo.pkl")
 caminho_dados_csv = st.sidebar.text_input("Nome do seu ficheiro de dados:", "dados1.csv")
 
-pipeline = load_model(caminho_modelo_pkl)
+model = load_model(caminho_modelo_pkl)
 dados = load_data(caminho_dados_csv)
 
 st.sidebar.markdown("---")
@@ -78,8 +88,7 @@ st.sidebar.info("Desenvolvido como uma ferramenta de suporte à decisão para an
 
 
 # --- Verificação de Erro ---
-if pipeline is None or dados is None:
-    st.error(f"ERRO: Não foi possível carregar os ficheiros. Verifique se os nomes '{caminho_modelo_pkl}' e '{caminho_dados_csv}' estão corretos e se os ficheiros estão na mesma pasta que o script.")
+if model is None or dados is None:
     st.stop()
 
 
