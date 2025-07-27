@@ -143,26 +143,34 @@ elif pagina == "🧠 Detalhes do Modelo":
     
     tab_matriz, tab_curvas = st.tabs(["Matriz de Confusão", "Curvas de Performance"])
 
+    try:
+        X = dados.drop('Cliente', axis=1)
+        y_true = dados['Cliente'].map({'bom pagador': 0, 'mau pagador': 1})
+        y_pred = pipeline.predict(X)
+        y_proba = pipeline.predict_proba(X)[:, 1]
+        
+        cm = confusion_matrix(y_true, y_pred)
+        precision_points, recall_points, _ = precision_recall_curve(y_true, y_proba)
+        recall = recall_score(y_true, y_pred)
+        precision = precision_score(y_true, y_pred)
+    except Exception as e:
+        st.warning(f"Não foi possível gerar os gráficos de performance do modelo. Erro: {e}")
+        cm = np.array([[0, 0], [0, 0]])
+        precision_points, recall_points = [0], [0]
+        recall, precision = 0.0, 0.0
+
     with tab_matriz:
         st.subheader("Matriz de Confusão Dinâmica")
         
-        # --- A CORREÇÃO ESTÁ AQUI ---
-        # Recriar a matriz de confusão usando componentes principais do Plotly
         z = cm
         x = ['Bom Pagador (Previsto)', 'Mau Pagador (Previsto)']
         y = ['Bom Pagador (Real)', 'Mau Pagador (Real)']
         
-        z_text = [[str(y) for y in x] for x in z] # Formatar os números como texto
+        z_text = [[str(y) for y in x] for x in z]
         
         fig_cm = go.Figure(data=go.Heatmap(
-                   z=z,
-                   x=x,
-                   y=y,
-                   hoverongaps=False,
-                   text=z_text,
-                   texttemplate="%{text}",
-                   colorscale='Greens'))
-        # --- FIM DA CORREÇÃO ---
+                   z=z, x=x, y=y, hoverongaps=False, text=z_text,
+                   texttemplate="%{text}", colorscale='Greens'))
 
         fig_cm.update_layout(title_text='<i><b>Matriz de Confusão do Modelo Carregado</b></i>')
         st.plotly_chart(fig_cm, use_container_width=True)
@@ -182,6 +190,7 @@ elif pagina == "🧠 Detalhes do Modelo":
         fig_pr.add_trace(go.Scatter(x=[recall], y=[precision], mode='markers', marker=dict(color='red', size=12), name='Ponto Operacional Atual'))
         fig_pr.update_layout(title='Curva de Precisão vs. Recall Dinâmica', xaxis_title='Recall', yaxis_title='Precisão')
         st.plotly_chart(fig_pr, use_container_width=True)
+
 
 # PÁGINA 4: SIMULADOR DE RISCO
 elif pagina == "⚙️ Simulador de Risco":
