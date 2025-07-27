@@ -92,10 +92,10 @@ if pagina == "📊 Dashboard Geral":
     st.markdown("Visão geral do desempenho do modelo e da distribuição dos dados.")
 
    try:
-    X_raw = dados.drop('Cliente', axis=1)
-    y_true = dados['Cliente'].map({'bom pagador': 0, 'mau pagador': 1})
-    y_proba = model.predict_proba(X_raw)[:, 1]
-    y_pred = (y_proba >= OPTIMAL_THRESHOLD).astype(int)
+        X_raw = dados.drop('Cliente', axis=1)
+        y_true = dados['Cliente'].map({'bom pagador': 0, 'mau pagador': 1})
+        y_proba = model.predict_proba(X_raw)[:, 1]
+        y_pred = (y_proba >= OPTIMAL_THRESHOLD).astype(int)
     
     recall = recall_score(y_true, y_pred)
     precision = precision_score(y_true, y_pred)
@@ -118,12 +118,12 @@ st.plotly_chart(fig_pie, use_container_width=True)
 
 # PÁGINA 2: ANÁLISE EXPLORATÓRIA
 elif pagina == "📈 Análise Exploratória":
-st.title("📈 Análise Exploratória Interativa")
-st.markdown("Explore as relações entre as variáveis do conjunto de dados filtrado.")
+    st.title("📈 Análise Exploratória Interativa")
+    st.markdown("Explore as relações entre as variáveis do conjunto de dados filtrado.")
     if dados is not None:
-    dados_filtrados['Risco_Atrasos'] = dados_filtrados['Atrasos'] * dados_filtrados['Negativos']
-    dados_filtrados['Historico_Risco'] = dados_filtrados['TempoCliente'] / (dados_filtrados['Atrasos'] + 1)
-    dados_filtrados['Alavancagem'] = dados_filtrados['Empréstimo'] / (dados_filtrados['ValorDoBem'] + 0.001)
+        dados_filtrados['Risco_Atrasos'] = dados_filtrados['Atrasos'] * dados_filtrados['Negativos']
+        dados_filtrados['Historico_Risco'] = dados_filtrados['TempoCliente'] / (dados_filtrados['Atrasos'] + 1)
+        dados_filtrados['Alavancagem'] = dados_filtrados['Empréstimo'] / (dados_filtrados['ValorDoBem'] + 0.001)
 
 tab1, tab2, tab3 = st.tabs(["Análise Univariada", "Análise Bivariada", "Análise Categórica"])
 with tab1:
@@ -152,13 +152,13 @@ with tab3:
 
 # PÁGINA 3: DETALHES DO MODELO
 elif pagina == "🧠 Detalhes do Modelo":
-st.title("🧠 Análise Profunda do Modelo")
-st.markdown("Aqui exploramos o comportamento e a performance do modelo carregado.")
+    st.title("🧠 Análise Profunda do Modelo")
+    st.markdown("Aqui exploramos o comportamento e a performance do modelo carregado.")
     try:
-    X_raw = dados.drop('Cliente', axis=1)
-    y_true = dados['Cliente'].map({'bom pagador': 0, 'mau pagador': 1})
-    y_proba = model.predict_proba(X_raw)[:, 1]
-    y_pred = (y_proba >= OPTIMAL_THRESHOLD).astype(int)
+        X_raw = dados.drop('Cliente', axis=1)
+        y_true = dados['Cliente'].map({'bom pagador': 0, 'mau pagador': 1})
+        y_proba = model.predict_proba(X_raw)[:, 1]
+        y_pred = (y_proba >= OPTIMAL_THRESHOLD).astype(int)
     
     cm = confusion_matrix(y_true, y_pred)
     precision_points, recall_points, thresholds = precision_recall_curve(y_true, y_proba)
@@ -254,8 +254,8 @@ with tab3:
 
 # PÁGINA 4: SIMULADOR DE RISCO
 elif pagina == "⚙️ Simulador de Risco":
-st.title("⚙️ Simulador Interativo de Risco de Crédito")
-st.markdown("Insira os dados de um novo solicitante para obter uma análise de risco em tempo real.")
+    st.title("⚙️ Simulador Interativo de Risco de Crédito")
+    st.markdown("Insira os dados de um novo solicitante para obter uma análise de risco em tempo real.")
 
     with st.expander("Clique aqui para preencher o formulário do cliente", expanded=True):
     col1, col2, col3 = st.columns(3)
@@ -381,8 +381,8 @@ if st.button("Analisar Risco do Cliente", type="primary"):
 
 # PÁGINA 5: IMPACTO NO NEGÓCIO
 elif pagina == "💼 Impacto no Negócio":
-st.title("💼 Calculadora de Impacto Financeiro")
-st.markdown("Estime o valor financeiro que o modelo pode economizar para a empresa.")
+    st.title("💼 Calculadora de Impacto Financeiro")
+    st.markdown("Estime o valor financeiro que o modelo pode economizar para a empresa.")
 
     try:
     X_raw = dados.drop('Cliente', axis=1)
