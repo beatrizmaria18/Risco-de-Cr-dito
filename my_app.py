@@ -63,17 +63,17 @@ st.sidebar.markdown("---")
 
 # --- Navegação ---
 if dados is not None:
-st.sidebar.header("Filtros da Análise")
-selected_finalidade = st.sidebar.multiselect(
-"Filtrar por Finalidade",
-options=dados['Finalidade'].unique(),
-default=dados['Finalidade'].unique()
+    st.sidebar.header("Filtros da Análise")
+    selected_finalidade = st.sidebar.multiselect(
+    "Filtrar por Finalidade",
+    options=dados['Finalidade'].unique(),
+    default=dados['Finalidade'].unique()
 )
-dados_filtrados = dados[dados['Finalidade'].isin(selected_finalidade)]
+    dados_filtrados = dados[dados['Finalidade'].isin(selected_finalidade)]
 else:
-dados_filtrados = pd.DataFrame()
+    dados_filtrados = pd.DataFrame()
 
-pagina = st.sidebar.radio(
+    pagina = st.sidebar.radio(
 "Navegue pelas seções:",
 ["📊 Dashboard Geral", "📈 Análise Exploratória", "🧠 Detalhes do Modelo", "⚙️ Simulador de Risco", "💼 Impacto no Negócio"]
 )
@@ -82,14 +82,14 @@ st.sidebar.info("Desenvolvido como uma ferramenta de suporte à decisão para an
 
 # --- Verificação de Erro ---
 if model is None or dados is None:
-st.stop()
+    st.stop()
 
 # --- Conteúdo das Páginas ---
 
 # PÁGINA 1: DASHBOARD GERAL
 if pagina == "📊 Dashboard Geral":
-st.title("📊 Dashboard do Modelo de Risco")
-st.markdown("Visão geral do desempenho do modelo e da distribuição dos dados.")
+    st.title("📊 Dashboard do Modelo de Risco")
+    st.markdown("Visão geral do desempenho do modelo e da distribuição dos dados.")
 
    try:
     X_raw = dados.drop('Cliente', axis=1)
