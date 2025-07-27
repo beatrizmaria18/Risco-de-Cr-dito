@@ -146,14 +146,24 @@ elif pagina == "🧠 Detalhes do Modelo":
     with tab_matriz:
         st.subheader("Matriz de Confusão Dinâmica")
         
-        z = cm.tolist()
+        # --- A CORREÇÃO ESTÁ AQUI ---
+        # Recriar a matriz de confusão usando componentes principais do Plotly
+        z = cm
         x = ['Bom Pagador (Previsto)', 'Mau Pagador (Previsto)']
         y = ['Bom Pagador (Real)', 'Mau Pagador (Real)']
         
-        z.reverse() # Inverte as linhas para o formato visual correto
-        y.reverse()
+        z_text = [[str(y) for y in x] for x in z] # Formatar os números como texto
         
-        fig_cm = create_annotated_heatmap(z, x=x, y=y, annotation_text=np.array(z).astype(str), colorscale='Greens')
+        fig_cm = go.Figure(data=go.Heatmap(
+                   z=z,
+                   x=x,
+                   y=y,
+                   hoverongaps=False,
+                   text=z_text,
+                   texttemplate="%{text}",
+                   colorscale='Greens'))
+        # --- FIM DA CORREÇÃO ---
+
         fig_cm.update_layout(title_text='<i><b>Matriz de Confusão do Modelo Carregado</b></i>')
         st.plotly_chart(fig_cm, use_container_width=True)
 
