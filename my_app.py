@@ -146,39 +146,32 @@ elif pagina == "🧠 Detalhes do Modelo":
     with tab_matriz:
         st.subheader("Matriz de Confusão Dinâmica")
         
-        # --- A CORREÇÃO ESTÁ AQUI ---
-        # A variável 'cm' já foi calculada dinamicamente no topo do script.
-        # Agora, usamos esses valores reais para gerar o gráfico.
         z = cm.tolist()
         x = ['Bom Pagador (Previsto)', 'Mau Pagador (Previsto)']
         y = ['Bom Pagador (Real)', 'Mau Pagador (Real)']
         
-        # Inverter a ordem de 'y' para que 'Mau Pagador (Real)' fique em baixo, como é comum
-        z.reverse()
+        z.reverse() # Inverte as linhas para o formato visual correto
         y.reverse()
         
         fig_cm = create_annotated_heatmap(z, x=x, y=y, annotation_text=np.array(z).astype(str), colorscale='Greens')
         fig_cm.update_layout(title_text='<i><b>Matriz de Confusão do Modelo Carregado</b></i>')
         st.plotly_chart(fig_cm, use_container_width=True)
-        # --- FIM DA CORREÇÃO ---
 
         st.markdown("""
         Esta matriz de confusão é gerada **dinamicamente** com base no seu modelo `.pkl` e nos seus dados `.csv`.
         - **Canto inferior direito (Verdadeiro Positivo):** Maus pagadores corretamente identificados.
         - **Canto inferior esquerdo (Falso Negativo):** O erro mais caro. Maus pagadores que o modelo deixou passar.
         """)
+
     with tab_curvas:
         st.subheader("Curva de Precisão vs. Recall (PR Curve)")
         st.info("Esta curva ajuda a visualizar o trade-off entre Precisão e Recall.")
         
-        # --- A CORREÇÃO ESTÁ AQUI ---
-        # O gráfico agora é gerado com os dados reais calculados
         fig_pr = go.Figure()
         fig_pr.add_trace(go.Scatter(x=recall_points, y=precision_points, mode='lines', name='Curva PR do Modelo'))
         fig_pr.add_trace(go.Scatter(x=[recall], y=[precision], mode='markers', marker=dict(color='red', size=12), name='Ponto Operacional Atual'))
         fig_pr.update_layout(title='Curva de Precisão vs. Recall Dinâmica', xaxis_title='Recall', yaxis_title='Precisão')
         st.plotly_chart(fig_pr, use_container_width=True)
-        # --- FIM DA CORREÇÃO ---
 
 
 # PÁGINA 4: SIMULADOR DE RISCO
