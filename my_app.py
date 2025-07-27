@@ -29,7 +29,7 @@ OPTIMAL_THRESHOLD = 0.42
 def load_model(caminho_modelo):
 
 try:
-return joblib.load(caminho_modelo)
+   return joblib.load(caminho_modelo)
 except Exception as e:
 st.error(f"ERRO AO CARREGAR O MODELO: Verifique o nome do ficheiro e as dependências. Erro: {e}")
 return None
@@ -38,7 +38,7 @@ return None
 def load_data(caminho_dados):
 
 try:
-dados = pd.read_csv(caminho_dados)
+   dados = pd.read_csv(caminho_dados)
 # Pré-processamento básico
 dados['RDS'] = dados['RDS'].astype(str).str.replace('%', '', regex=False)
 dados['RDS'] = pd.to_numeric(dados['RDS'], errors='coerce')
