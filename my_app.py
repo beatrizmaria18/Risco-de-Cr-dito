@@ -98,34 +98,10 @@ if pagina == "📊 Dashboard Geral":
 
     st.markdown("---")
 
-    col_a, col_b = st.columns([2, 1])
-    with col_a:
-        st.subheader("Importância das Variáveis (Features)")
-        try:
-            # --- A CORREÇÃO ESTÁ AQUI ---
-            # Verifica se o objeto carregado é um pipeline antes de tentar aceder aos seus passos
-            if hasattr(pipeline, 'named_steps'):
-                feature_names = pipeline.named_steps['preprocessor'].get_feature_names_out()
-                importances = pipeline.named_steps['classifier'].feature_importances_
-                feature_importance_df = pd.DataFrame({'feature': feature_names, 'importance': importances})
-                
-                feature_importance_df = feature_importance_df.sort_values('importance', ascending=False).head(10)
-                fig_imp = px.bar(feature_importance_df, x='importance', y='feature', orientation='h', title='Top 10 Variáveis Mais Influentes')
-                fig_imp.update_layout(yaxis={'categoryorder':'total ascending'})
-                st.plotly_chart(fig_imp, use_container_width=True)
-            else:
-                # Se não for um pipeline, mostra uma mensagem de aviso
-                st.warning("Não é possível exibir a importância das features porque o ficheiro .pkl não contém o pipeline de pré-processamento. Para ver este gráfico, treine e salve o pipeline completo, não apenas o classificador.")
-            # --- FIM DA CORREÇÃO ---
-        except Exception as e:
-            st.error(f"Ocorreu um erro ao tentar gerar o gráfico de importância das features: {e}")
-
-
-    with col_b:
-        st.subheader("Distribuição de Clientes")
-        cliente_counts = dados_filtrados['Cliente'].value_counts()
-        fig_pie = px.pie(values=cliente_counts.values, names=cliente_counts.index, title='Proporção de Bons vs. Maus Pagadores', hole=.3)
-        st.plotly_chart(fig_pie, use_container_width=True)
+    st.subheader("Distribuição de Clientes")
+    cliente_counts = dados_filtrados['Cliente'].value_counts()
+    fig_pie = px.pie(values=cliente_counts.values, names=cliente_counts.index, title='Proporção de Bons vs. Maus Pagadores', hole=.3)
+    st.plotly_chart(fig_pie, use_container_width=True)
 
 # PÁGINA 2: ANÁLISE EXPLORATÓRIA
 elif pagina == "📈 Análise Exploratória":
@@ -166,7 +142,6 @@ elif pagina == "🧠 Detalhes do Modelo":
     with tab_matriz:
         st.subheader("Matriz de Confusão")
         
-        # --- A CORREÇÃO ESTÁ AQUI ---
         # Gerar a matriz de confusão dinamicamente com Plotly
         # Usamos os valores da nossa última matriz de confusão bem-sucedida como exemplo
         z = [[802, 4], [61, 123]]
@@ -177,10 +152,9 @@ elif pagina == "🧠 Detalhes do Modelo":
         z.reverse()
         y.reverse()
 
-        fig_cm = ff.create_annotated_heatmap(z, x=x, y=y, annotation_text=np.array(z).astype(str), colorscale='Greens')
+        fig_cm = plotly.figure_factory.create_annotated_heatmap(z, x=x, y=y, annotation_text=np.array(z).astype(str), colorscale='Greens')
         fig_cm.update_layout(title_text='<i><b>Matriz de Confusão (Exemplo)</b></i>')
         st.plotly_chart(fig_cm, use_container_width=True)
-        # --- FIM DA CORREÇÃO ---
 
         st.markdown("**Nota:** Esta é uma matriz de confusão de exemplo baseada no desempenho do modelo otimizado. A performance real do seu modelo pode ser diferente.")
 
@@ -194,7 +168,6 @@ elif pagina == "🧠 Detalhes do Modelo":
         fig_pr.add_trace(go.Scatter(x=[0.668], y=[0.969], mode='markers', marker=dict(color='red', size=12), name='Exemplo de Ponto Operacional'))
         fig_pr.update_layout(title='Curva de Precisão vs. Recall (Exemplo)', xaxis_title='Recall', yaxis_title='Precisão')
         st.plotly_chart(fig_pr, use_container_width=True)
-
 
 # PÁGINA 4: SIMULADOR DE RISCO
 elif pagina == "⚙️ Simulador de Risco":
