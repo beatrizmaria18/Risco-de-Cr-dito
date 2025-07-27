@@ -148,36 +148,40 @@ elif pagina == "📈 Análise Exploratória":
 elif pagina == "🧠 Detalhes do Modelo":
     st.title("🧠 Análise Profunda do Modelo")
     st.markdown("Aqui exploramos o comportamento e a performance do modelo carregado.")
-    tab_matriz, tab_curvas = st.tabs(["Matriz de Confusão", "Curvas de Performance"])
+    
+    # --- A CORREÇÃO ESTÁ AQUI ---
+    tab_importancia, tab_curvas = st.tabs(["Importância das Features", "Curvas de Performance"])
 
-    try:
-        X_raw = dados.drop('Cliente', axis=1)
-        y_true = dados['Cliente'].map({'bom pagador': 0, 'mau pagador': 1})
-        # --- CORREÇÃO: Enviamos os dados "crus" diretamente para o pipeline ---
-        y_pred = model.predict(X_raw)
-        y_proba = model.predict_proba(X_raw)[:, 1]
-        cm = confusion_matrix(y_true, y_pred)
-        precision_points, recall_points, _ = precision_recall_curve(y_true, y_proba)
-        recall = recall_score(y_true, y_pred)
-        precision = precision_score(y_true, y_pred)
-    except Exception as e:
-        st.warning(f"Não foi possível gerar os gráficos de performance do modelo. Erro: {e}")
-        cm = np.array([[0, 0], [0, 0]])
-        precision_points, recall_points = [0], [0]
-        recall, precision = 0.0, 0.0
+    with tab_importancia:
+        st.subheader("Importância das Features do Modelo")
+        try:
+            # Tenta extrair a importância das features do pipeline
+            if hasattr(model, 'named_steps'):
+                # Caso o .pkl seja um pipeline completo
+                feature_names = model.named_steps['preprocessor'].get_feature_names_out()
+                importances = model.named_steps['classifier'].feature_importances_
+            else:
+                # Caso o .pkl seja apenas o classificador
+                importances = model.feature_importances_
+                # Precisamos do nome das colunas após o pré-processamento
+                X_raw = dados.drop('Cliente', axis=1)
+                categorical_features = X_raw.select_dtypes(include=['object']).columns
+                X_processed = pd.get_dummies(X_raw, columns=categorical_features)
+                feature_names = X_processed.columns
 
-    with tab_matriz:
-        st.subheader("Matriz de Confusão Dinâmica")
-        z = cm
-        x = ['Bom Pagador (Previsto)', 'Mau Pagador (Previsto)']
-        y = ['Bom Pagador (Real)', 'Mau Pagador (Real)']
-        z_text = [[str(y) for y in x] for x in z]
-        fig_cm = go.Figure(data=go.Heatmap(
-                   z=z, x=x, y=y, hoverongaps=False, text=z_text,
-                   texttemplate="%{text}", colorscale='Greens'))
-        fig_cm.update_layout(title_text='<i><b>Matriz de Confusão do Modelo Carregado</b></i>')
-        st.plotly_chart(fig_cm, use_container_width=True)
-        st.markdown("Esta matriz é gerada **dinamicamente** com base no seu modelo e dados.")
+            feature_importance_df = pd.DataFrame({'feature': feature_names, 'importance': importances})
+            feature_importance_df = feature_importance_df.sort_values('importance', ascending=False).head(15)
+            
+            fig_imp = px.bar(feature_importance_df, x='importance', y='feature', orientation='h', 
+                             title='Top 15 Variáveis Mais Influentes na Decisão do Modelo')
+            fig_imp.update_layout(yaxis={'categoryorder':'total ascending'})
+            st.plotly_chart(fig_imp, use_container_width=True)
+            st.markdown("Este gráfico mostra quais variáveis o modelo considera mais importantes para fazer uma previsão. Quanto maior a barra, maior a influência da variável.")
+
+        except AttributeError:
+             st.warning("O modelo carregado não possui o atributo 'feature_importances_'. Este gráfico só está disponível para modelos baseados em árvores (como Random Forest, Gradient Boosting, etc.).")
+        except Exception as e:
+            st.error(f"Ocorreu um erro ao tentar gerar o gráfico de importância das features: {e}")
 
     with tab_curvas:
         st.subheader("Curva de Precisão vs. Recall (PR Curve)")
@@ -187,6 +191,7 @@ elif pagina == "🧠 Detalhes do Modelo":
         fig_pr.add_trace(go.Scatter(x=[recall], y=[precision], mode='markers', marker=dict(color='red', size=12), name='Ponto Operacional Atual'))
         fig_pr.update_layout(title='Curva de Precisão vs. Recall Dinâmica', xaxis_title='Recall', yaxis_title='Precisão')
         st.plotly_chart(fig_pr, use_container_width=True)
+    # --- FIM DA CORREÇÃO ---
 
 
 # PÁGINA 4: SIMULADOR DE RISCO
