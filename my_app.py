@@ -140,15 +140,14 @@ elif pagina == "📈 Análise Exploratória":
 elif pagina == "🧠 Detalhes do Modelo":
     st.title("🧠 Análise Profunda do Modelo")
     st.markdown("Aqui exploramos o comportamento e a performance do modelo carregado.")
-    
     tab_matriz, tab_curvas = st.tabs(["Matriz de Confusão", "Curvas de Performance"])
 
     try:
-        X = dados.drop('Cliente', axis=1)
+        X_raw = dados.drop('Cliente', axis=1)
         y_true = dados['Cliente'].map({'bom pagador': 0, 'mau pagador': 1})
-        y_pred = pipeline.predict(X)
-        y_proba = pipeline.predict_proba(X)[:, 1]
-        
+        X_processed = preprocess_for_prediction(X_raw, dados)
+        y_pred = model.predict(X_processed)
+        y_proba = model.predict_proba(X_processed)[:, 1]
         cm = confusion_matrix(y_true, y_pred)
         precision_points, recall_points, _ = precision_recall_curve(y_true, y_proba)
         recall = recall_score(y_true, y_pred)
@@ -161,30 +160,20 @@ elif pagina == "🧠 Detalhes do Modelo":
 
     with tab_matriz:
         st.subheader("Matriz de Confusão Dinâmica")
-        
         z = cm
         x = ['Bom Pagador (Previsto)', 'Mau Pagador (Previsto)']
         y = ['Bom Pagador (Real)', 'Mau Pagador (Real)']
-        
         z_text = [[str(y) for y in x] for x in z]
-        
         fig_cm = go.Figure(data=go.Heatmap(
                    z=z, x=x, y=y, hoverongaps=False, text=z_text,
                    texttemplate="%{text}", colorscale='Greens'))
-
         fig_cm.update_layout(title_text='<i><b>Matriz de Confusão do Modelo Carregado</b></i>')
         st.plotly_chart(fig_cm, use_container_width=True)
-
-        st.markdown("""
-        Esta matriz de confusão é gerada **dinamicamente** com base no seu modelo `.pkl` e nos seus dados `.csv`.
-        - **Canto inferior direito (Verdadeiro Positivo):** Maus pagadores corretamente identificados.
-        - **Canto inferior esquerdo (Falso Negativo):** O erro mais caro. Maus pagadores que o modelo deixou passar.
-        """)
+        st.markdown("Esta matriz é gerada **dinamicamente** com base no seu modelo e dados.")
 
     with tab_curvas:
         st.subheader("Curva de Precisão vs. Recall (PR Curve)")
         st.info("Esta curva ajuda a visualizar o trade-off entre Precisão e Recall.")
-        
         fig_pr = go.Figure()
         fig_pr.add_trace(go.Scatter(x=recall_points, y=precision_points, mode='lines', name='Curva PR do Modelo'))
         fig_pr.add_trace(go.Scatter(x=[recall], y=[precision], mode='markers', marker=dict(color='red', size=12), name='Ponto Operacional Atual'))
