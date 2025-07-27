@@ -22,7 +22,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Funções de Carregamento e Pré-processamento ---
+# --- Funções de Carregamento ---
 @st.cache_resource
 def load_model(caminho_modelo):
     """Carrega o modelo treinado a partir de um ficheiro .pkl."""
@@ -41,33 +41,12 @@ def load_data(caminho_dados):
         st.error(f"ERRO AO CARREGAR OS DADOS: Verifique o nome do ficheiro '{caminho_dados}'. Erro: {e}")
         return None
 
-def preprocess_for_prediction(df_to_predict, reference_df):
-    """
-    Prepara um DataFrame para previsão, aplicando One-Hot Encoding
-    e alinhando as colunas com base num DataFrame de referência.
-    """
-    # Identifica colunas categóricas do DataFrame de referência
-    categorical_features = reference_df.select_dtypes(include=['object']).columns
-    if 'Cliente' in categorical_features:
-        categorical_features = categorical_features.drop('Cliente')
-
-    # Aplica get_dummies ao DataFrame de entrada
-    df_processed = pd.get_dummies(df_to_predict, columns=categorical_features, dummy_na=False)
-
-    # Cria colunas dummy a partir do DataFrame de referência para obter o conjunto completo de colunas
-    reference_processed = pd.get_dummies(reference_df.drop('Cliente', axis=1), columns=categorical_features, dummy_na=False)
-
-    # Alinha as colunas do df de entrada com as do df de referência, preenchendo com 0 as que faltarem
-    df_aligned = df_processed.reindex(columns=reference_processed.columns, fill_value=0)
-    
-    return df_aligned
-
 # --- Barra Lateral e Carregamento dos Ficheiros ---
 st.sidebar.title("🏦 Dashboard de Risco")
 st.sidebar.markdown("---")
 st.sidebar.header("Configuração de Ficheiros")
 
-caminho_modelo_pkl = st.sidebar.text_input("Nome do seu ficheiro de modelo:", "best.pkl")
+caminho_modelo_pkl = st.sidebar.text_input("Nome do seu ficheiro de modelo:", "meu_modelo.pkl")
 caminho_dados_csv = st.sidebar.text_input("Nome do seu ficheiro de dados:", "dados1.csv")
 
 model = load_model(caminho_modelo_pkl)
@@ -99,37 +78,24 @@ st.sidebar.info("Desenvolvido como uma ferramenta de suporte à decisão para an
 if model is None or dados is None:
     st.stop()
 
-# --- Cálculo Centralizado de Métricas ---
-try:
-    X_raw = dados.drop('Cliente', axis=1)
-    y_true = dados['Cliente'].map({'bom pagador': 0, 'mau pagador': 1})
-    
-    # --- A CORREÇÃO ESTÁ AQUI ---
-    # Pré-processamos os dados antes de enviar para o modelo
-    X_processed = preprocess_for_prediction(X_raw, dados)
-    
-    y_pred = model.predict(X_processed)
-    y_proba = model.predict_proba(X_processed)[:, 1]
-
-    recall = recall_score(y_true, y_pred)
-    precision = precision_score(y_true, y_pred)
-    accuracy = accuracy_score(y_true, y_pred)
-    cm = confusion_matrix(y_true, y_pred)
-    precision_points, recall_points, _ = precision_recall_curve(y_true, y_proba)
-
-except Exception as e:
-    st.warning(f"Não foi possível calcular as métricas de performance. Verifique os dados e o modelo. Erro: {e}")
-    recall, precision, accuracy = 0.0, 0.0, 0.0
-    cm = np.array([[0, 0], [0, 0]])
-    precision_points, recall_points = [0], [0]
-
-
 # --- Conteúdo das Páginas ---
 
 # PÁGINA 1: DASHBOARD GERAL
 if pagina == "📊 Dashboard Geral":
     st.title("📊 Dashboard Geral do Modelo de Risco")
     st.markdown("Visão geral do desempenho do modelo e da distribuição dos dados.")
+
+    try:
+        X_raw = dados.drop('Cliente', axis=1)
+        y_true = dados['Cliente'].map({'bom pagador': 0, 'mau pagador': 1})
+        # --- CORREÇÃO: Enviamos os dados "crus" diretamente para o pipeline ---
+        y_pred = model.predict(X_raw)
+        recall = recall_score(y_true, y_pred)
+        precision = precision_score(y_true, y_pred)
+        accuracy = accuracy_score(y_true, y_pred)
+    except Exception as e:
+        st.warning(f"Não foi possível calcular as métricas de performance. Verifique os dados e o modelo. Erro: {e}")
+        recall, precision, accuracy = 0.0, 0.0, 0.0
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Recall do Modelo", f"{recall:.2%}", help="Capacidade de identificar os 'maus pagadores'.")
@@ -170,6 +136,22 @@ elif pagina == "🧠 Detalhes do Modelo":
     st.title("🧠 Análise Profunda do Modelo")
     st.markdown("Aqui exploramos o comportamento e a performance do modelo carregado.")
     tab_matriz, tab_curvas = st.tabs(["Matriz de Confusão", "Curvas de Performance"])
+
+    try:
+        X_raw = dados.drop('Cliente', axis=1)
+        y_true = dados['Cliente'].map({'bom pagador': 0, 'mau pagador': 1})
+        # --- CORREÇÃO: Enviamos os dados "crus" diretamente para o pipeline ---
+        y_pred = model.predict(X_raw)
+        y_proba = model.predict_proba(X_raw)[:, 1]
+        cm = confusion_matrix(y_true, y_pred)
+        precision_points, recall_points, _ = precision_recall_curve(y_true, y_proba)
+        recall = recall_score(y_true, y_pred)
+        precision = precision_score(y_true, y_pred)
+    except Exception as e:
+        st.warning(f"Não foi possível gerar os gráficos de performance do modelo. Erro: {e}")
+        cm = np.array([[0, 0], [0, 0]])
+        precision_points, recall_points = [0], [0]
+        recall, precision = 0.0, 0.0
 
     with tab_matriz:
         st.subheader("Matriz de Confusão Dinâmica")
@@ -224,11 +206,8 @@ elif pagina == "⚙️ Simulador de Risco":
         }
         input_data = pd.DataFrame(input_data_dict)
         
-        # --- A CORREÇÃO ESTÁ AQUI ---
-        # Pré-processamos os dados do formulário antes de enviar para o modelo
-        input_processed = preprocess_for_prediction(input_data, dados)
-
-        prediction_proba = model.predict_proba(input_processed)[0]
+        # --- CORREÇÃO: Enviamos os dados "crus" diretamente para o pipeline ---
+        prediction_proba = model.predict_proba(input_data)[0]
         prob_mau_pagador = prediction_proba[1] 
 
         fig_gauge = go.Figure(go.Indicator(
@@ -256,8 +235,15 @@ elif pagina == "💼 Impacto no Negócio":
     with col2:
         taxa_perda = st.slider("Taxa de Perda sobre Inadimplência (%)", 10, 100, 60)
     with col3:
-        # Usamos a variável 'cm' já calculada
-        fn_reais = cm[1][0]
+        try:
+            X_raw = dados.drop('Cliente', axis=1)
+            y_true = dados['Cliente'].map({'bom pagador': 0, 'mau pagador': 1})
+            # --- CORREÇÃO: Enviamos os dados "crus" diretamente para o pipeline ---
+            y_pred = model.predict(X_raw)
+            cm_calc = confusion_matrix(y_true, y_pred)
+            fn_reais = cm_calc[1][0]
+        except Exception:
+            fn_reais = 0
         fn_evitados = st.number_input("Falsos Negativos do Modelo", min_value=0, value=int(fn_reais), step=1)
 
     prejuizo_por_fn = valor_medio_emprestimo * (taxa_perda / 100)
@@ -270,3 +256,4 @@ elif pagina == "💼 Impacto no Negócio":
     col_res1, col_res2 = st.columns(2)
     col_res1.metric("Prejuízo por Cliente Não Detectado", f"R$ {prejuizo_por_fn:,.2f}")
     col_res2.metric("Prejuízo Total Potencial", f"R$ {economia_total:,.2f}", "Risco")
+
