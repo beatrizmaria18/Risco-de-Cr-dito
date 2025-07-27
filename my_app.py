@@ -1,4 +1,4 @@
-# Arquivo Único: app_final.py
+t# Arquivo Único: app_final.py
 # ------------------------------------
 # OBJETIVO: Versão final com pré-processamento manual para garantir compatibilidade com o modelo.
 #
@@ -67,7 +67,7 @@ st.sidebar.title("🏦 Dashboard de Risco")
 st.sidebar.markdown("---")
 st.sidebar.header("Configuração de Ficheiros")
 
-caminho_modelo_pkl = st.sidebar.text_input("Nome do seu ficheiro de modelo:", "meu_modelo.pkl")
+caminho_modelo_pkl = st.sidebar.text_input("Nome do seu ficheiro de modelo:", "best.pkl")
 caminho_dados_csv = st.sidebar.text_input("Nome do seu ficheiro de dados:", "dados1.csv")
 
 model = load_model(caminho_modelo_pkl)
