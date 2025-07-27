@@ -25,12 +25,13 @@ st.set_page_config(
 # --- Funções de Carregamento ---
 @st.cache_resource
 def load_model(caminho_modelo):
-    """Carrega o modelo treinado a partir de um ficheiro .pkl."""
+    """Carrega o pipeline completo com ExtraTrees"""
     try:
         return joblib.load(caminho_modelo)
     except Exception as e:
         st.error(f"ERRO AO CARREGAR O MODELO: Verifique o nome do ficheiro e as dependências. Erro: {e}")
         return None
+
 
 @st.cache_data
 def load_data(caminho_dados):
