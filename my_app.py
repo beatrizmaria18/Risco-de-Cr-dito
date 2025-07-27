@@ -27,7 +27,7 @@ OPTIMAL_THRESHOLD = 0.42
 # --- Funções de Carregamento ---
 @st.cache_resource
 def load_model(caminho_modelo):
-"""Carrega o pipeline completo com ExtraTrees"""
+#"""Carrega o pipeline completo com ExtraTrees"""
 try:
 return joblib.load(caminho_modelo)
 except Exception as e:
@@ -36,7 +36,7 @@ return None
 
 @st.cache_data
 def load_data(caminho_dados):
-"""Carrega os dados para a análise exploratória."""
+#"""Carrega os dados para a análise exploratória."""
 try:
 dados = pd.read_csv(caminho_dados)
 # Pré-processamento básico
