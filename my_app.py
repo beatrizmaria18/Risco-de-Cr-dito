@@ -69,6 +69,28 @@ st.sidebar.info("Desenvolvido como uma ferramenta de suporte à decisão para an
 if model is None or dados is None:
     st.stop()
 
+# --- A CORREÇÃO ESTÁ AQUI: Cálculo Centralizado de Métricas ---
+try:
+    X_raw = dados.drop('Cliente', axis=1)
+    y_true = dados['Cliente'].map({'bom pagador': 0, 'mau pagador': 1})
+    y_pred = model.predict(X_raw)
+    y_proba = model.predict_proba(X_raw)[:, 1]
+
+    recall = recall_score(y_true, y_pred)
+    precision = precision_score(y_true, y_pred)
+    accuracy = accuracy_score(y_true, y_pred)
+    cm = confusion_matrix(y_true, y_pred)
+    precision_points, recall_points, _ = precision_recall_curve(y_true, y_proba)
+
+except Exception as e:
+    st.warning(f"Não foi possível calcular as métricas de performance. Verifique os dados e o modelo. Erro: {e}")
+    recall, precision, accuracy = 0.0, 0.0, 0.0
+    cm = np.array([[0, 0], [0, 0]])
+    precision_points, recall_points = [0], [0]
+# --- FIM DA CORREÇÃO ---
+
+
+
 # --- Conteúdo das Páginas ---
 
 # PÁGINA 1: DASHBOARD GERAL
