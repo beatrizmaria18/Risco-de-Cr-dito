@@ -60,6 +60,96 @@ dados = load_data(caminho_dados_csv)
 
 
 
+def load_model():
+    try:
+        # Supondo que seu arquivo salvo contém o pipeline direto
+        model = joblib.load('best.pkl')  # Ou 'modelo_completo.pkl'
+        
+        # Verificar se é um dicionário (caso antigo) ou o modelo/pipeline direto
+        if isinstance(model, dict):
+            st.warning("Modelo carregado como dicionário - extraindo o pipeline...")
+            return model['pipeline']  # Ou model['model'] conforme sua estrutura
+        else:
+            return model
+            
+    except Exception as e:
+        st.error(f"Erro ao carregar o modelo: {str(e)}")
+        st.stop()
+
+# Carregar o modelo
+pipeline = load_model()
+
+# Função para preparar dados de entrada
+def prepare_input(form_data):
+    input_df = pd.DataFrame([form_data])
+    
+    # Feature engineering (DEVE SER IDÊNTICO AO TREINO)
+    input_df['Risco_Atrasos'] = input_df['Atrasos'] * input_df['Negativos']
+    input_df['Historico_Risco'] = input_df['TempoCliente'] / (input_df['Atrasos'] + 1e-6)
+    input_df['Alavancagem'] = input_df['Empréstimo'] / (input_df['ValorDoBem'] + 0.001)
+    
+    # Verificar e adicionar colunas faltantes (one-hot)
+    expected_columns = [
+        'Alavancagem',
+        'Emprego_Autônomo',
+        'Emprego_Comissionado',
+        'Emprego_Geral',
+        'Emprego_Gerente',
+        #... adicione todas as outras colunas que seu modelo espera
+    ]
+    
+    for col in expected_columns:
+        if col not in input_df.columns:
+            if col.startswith('Emprego_'):
+                # Se for uma coluna one-hot, preencher com 0 ou 1 conforme o valor selecionado
+                emprego_value = col.replace('Emprego_', '')
+                input_df[col] = 1 if form_data['Emprego'] == emprego_value else 0
+            else:
+                input_df[col] = 0  # Preencher outras colunas com 0
+    
+    return input_df[expected_columns]  # Manter a ordem correta
+
+# Interface do Streamlit
+with st.form("form_risco"):
+    # Campos do formulário
+    emprego = st.selectbox("Emprego", options=['Autônomo', 'Comissionado', 'Geral', 'Gerente', 'Outros'])
+    finalidade = st.selectbox("Finalidade", options=['Pessoal', 'Comercial'])
+    atrasos = st.number_input("Atrasos", min_value=0, value=0)
+    negativos = st.number_input("Negativos", min_value=0, value=0)
+    tempo_cliente = st.number_input("Tempo como Cliente", min_value=0, value=12)
+    emprestimo = st.number_input("Valor do Empréstimo", min_value=0, value=10000)
+    valor_bem = st.number_input("Valor do Bem", min_value=0, value=20000)
+    
+    if st.form_submit_button("Calcular Risco"):
+        form_data = {
+            'Emprego': emprego,
+            'Finalidade': finalidade,
+            'Atrasos': atrasos,
+            'Negativos': negativos,
+            'TempoCliente': tempo_cliente,
+            'Empréstimo': emprestimo,
+            'ValorDoBem': valor_bem
+        }
+        
+        try:
+            # Preparar dados
+            input_data = prepare_input(form_data)
+            
+            # Verificar se o objeto tem predict_proba
+            if hasattr(pipeline, 'predict_proba'):
+                proba = pipeline.predict_proba(input_data)[0][1]
+                st.success(f"Probabilidade de mau pagador: {proba:.1%}")
+            else:
+                st.error("O modelo carregado não tem método predict_proba()")
+            
+        except Exception as e:
+            st.error(f"Erro ao processar: {str(e)}")
+            st.write("Dados enviados:", input_data)
+
+
+
+
+
 
 
 
