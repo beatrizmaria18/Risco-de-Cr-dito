@@ -71,7 +71,7 @@ def load_model():
         st.stop()
 
 model_data = load_model()
-model = model_data['model']
+model = model_data['pipeline']
 feature_names = model_data['feature_names']
 categorical_cols = model_data['categorical_cols']
 
