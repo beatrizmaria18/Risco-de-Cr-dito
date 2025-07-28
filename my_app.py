@@ -305,10 +305,7 @@ elif pagina == "⚙️ Simulador de Risco":
         }
         
         input_data = pd.DataFrame(input_data_dict)
-
-
-        st.write("Dados sendo enviados para o modelo:", input_data)
-st.write("Colunas do modelo esperadas:", model.feature_names_in_)
+        
         try:
             # Obter probabilidades
             proba = model.predict_proba(input_data)[0]
