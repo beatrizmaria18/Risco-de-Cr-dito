@@ -62,6 +62,83 @@ dados = load_data(caminho_dados_csv)
 
 
 
+def load_model():
+    try:
+        model_data = joblib.load('modelo_completo.pkl')
+        return model_data
+    except Exception as e:
+        st.error(f"Erro ao carregar o modelo: {str(e)}")
+        st.stop()
+
+model_data = load_model()
+model = model_data['model']
+feature_names = model_data['feature_names']
+categorical_cols = model_data['categorical_cols']
+
+# Função para preparar os dados de entrada
+def prepare_input(input_dict):
+    # Converter para DataFrame
+    input_df = pd.DataFrame([input_dict])
+    
+    # Feature engineering (DEVE SER IDÊNTICO AO QUE FOI FEITO NO TREINO)
+    input_df['Risco_Atrasos'] = input_df['Atrasos'] * input_df['Negativos']
+    input_df['Historico_Risco'] = input_df['TempoCliente'] / (input_df['Atrasos'] + 1e-6)
+    input_df['Alavancagem'] = input_df['Empréstimo'] / (input_df['ValorDoBem'] + 0.001)
+    
+    # Aplicar one-hot encoding (DEVE SER IDÊNTICO AO TREINO)
+    for col in categorical_cols:
+        if col in input_df.columns:
+            # Obter todas as categorias que existiam no treino
+            categories = [f.split('_')[1] for f in feature_names if f.startswith(col+'_')]
+            
+            # Criar colunas one-hot
+            for category in categories:
+                input_df[f'{col}_{category}'] = (input_df[col] == category).astype(int)
+            
+            # Remover a coluna original
+            input_df.drop(col, axis=1, inplace=True)
+    
+    # Garantir que temos TODAS as colunas que o modelo espera
+    missing_cols = set(feature_names) - set(input_df.columns)
+    for col in missing_cols:
+        input_df[col] = 0  # Preencher com zero para colunas faltantes
+    
+    # Manter apenas as colunas na ordem EXATA que o modelo espera
+    input_df = input_df[feature_names]
+    
+    return input_df
+
+# Interface do Streamlit
+with st.form("form_risco"):
+    # Exemplo de campos - ajuste conforme seu caso real
+    emprego = st.selectbox("Emprego", options=['Autônomo', 'Comissionado', 'Geral', 'Gerente', 'Outros'])
+    finalidade = st.selectbox("Finalidade", options=['Pessoal', 'Comercial'])
+    atrasos = st.number_input("Atrasos", min_value=0, value=0)
+    # ... adicione todos os outros campos necessários
+    
+    if st.form_submit_button("Calcular Risco"):
+        try:
+            # Preparar dados no formato correto
+            input_data = {
+                'Emprego': emprego,
+                'Finalidade': finalidade,
+                'Atrasos': atrasos,
+                # ... todos os outros campos
+            }
+            
+            # Processar os dados
+            processed_data = prepare_input(input_data)
+            
+            # Fazer a previsão
+            proba = model.predict_proba(processed_data)[0][1]
+            st.success(f"Probabilidade de mau pagador: {proba:.1%}")
+            
+        except Exception as e:
+            st.error(f"Erro ao processar: {str(e)}")
+            st.write("Dados processados:", processed_data if 'processed_data' in locals() else "Não disponível")
+
+
+
 
 
 
