@@ -268,7 +268,7 @@ elif pagina == "⚙️ Simulador de Risco":
             emprestimo_valor = st.slider("Valor do Empréstimo (R$)", 1000, 200000, 50000)
             valor_do_bem = st.slider("Valor do Bem (R$)", 1000, 1000000, 100000)
             Alavancagem = emprestimo_valor / (valor_do_bem + 0.001)
-            st.metric("Alavancagem", f"{alavancagem:.2f}")
+            st.metric("Alavancagem", f"{Alavancagem:.2f}")
             
         with col2:
             emprego = st.selectbox("Tipo de Emprego", options=dados['Emprego'].unique())
