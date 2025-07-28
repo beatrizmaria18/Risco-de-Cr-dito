@@ -359,6 +359,14 @@ elif pagina == "⚙️ Simulador de Risco":
     st.title("⚙️ Simulador Interativo de Risco de Crédito")
     st.markdown("Insira os dados de um novo solicitante para obter uma análise de risco em tempo real.")
 
+    # Carregar metadados do modelo (se existirem)
+    try:
+        metadata = joblib.load('model_metadata.pkl')
+        feature_names = metadata.get('feature_names', [])
+    except:
+        feature_names = []
+        st.warning("Metadados do modelo não encontrados. Usando configuração padrão.")
+
     with st.expander("Clique aqui para preencher o formulário do cliente", expanded=True):
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -385,100 +393,112 @@ elif pagina == "⚙️ Simulador de Risco":
             lc_atual = st.slider("Linhas de Crédito Atuais", 0, 20, 5)
 
     if st.button("Analisar Risco do Cliente", type="primary"):
-        input_data_dict = {
-            'Empréstimo': [emprestimo_valor],
-            'ValorDoBem': [valor_do_bem],
-            'Finalidade': [finalidade],
-            'Emprego': [emprego],
-            'TempoEmprego': [tempo_emprego],
-            'Negativos': [negativos],
-            'Atrasos': [atrasos],
-            'TempoCliente': [tempo_cliente],
-            'LC-Recente': [lc_recente],
-            'LC-Atual': [lc_atual],
-            'RDS': [rds],
-            'Risco_Atrasos': [Risco_Atrasos],
-            'Historico_Risco': [Historico_Risco],
-            'Alavancagem': [Alavancagem]
+        # Preparar dados de entrada no formato correto
+        input_data = {
+            'Empréstimo': emprestimo_valor,
+            'ValorDoBem': valor_do_bem,
+            'Finalidade': finalidade,
+            'Emprego': emprego,
+            'TempoEmprego': tempo_emprego,
+            'Negativos': negativos,
+            'Atrasos': atrasos,
+            'TempoCliente': tempo_cliente,
+            'LC-Recente': lc_recente,
+            'LC-Atual': lc_atual,
+            'RDS': rds,
+            'Risco_Atrasos': Risco_Atrasos,
+            'Historico_Risco': Historico_Risco,
+            'Alavancagem': Alavancagem
         }
         
-        input_data = pd.DataFrame(input_data_dict)
-        if hasattr(model, 'feature_names_in_'):
-            input_data = input_data[model.feature_names_in_]
-        
         try:
-            # Obter probabilidades
-            proba = model.predict_proba(input_data)[0]
-            prob_mau_pagador = proba[1]
+            # Converter para DataFrame
+            input_df = pd.DataFrame([input_data])
             
-            # Aplicar limiar ótimo
-            classificacao = "mau pagador" if prob_mau_pagador >= OPTIMAL_THRESHOLD else "bom pagador"
+            # Aplicar one-hot encoding manualmente
+            for categoria in dados['Finalidade'].unique():
+                input_df[f'Finalidade_{categoria}'] = (input_df['Finalidade'] == categoria).astype(int)
             
-            # Visualização 1: Gauge de probabilidade
-            fig_gauge = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=prob_mau_pagador * 100,
-                title={'text': "Probabilidade de Inadimplência (%)"},
-                gauge={
-                    'axis': {'range': [None, 100]},
-                    'steps': [
-                        {'range': [0, 30], 'color': "lightgreen"},
-                        {'range': [30, 70], 'color': "yellow"},
-                        {'range': [70, 100], 'color': "red"}
-                    ],
-                    'threshold': {
-                        'line': {'color': "black", 'width': 4},
-                        'thickness': 0.75,
-                        'value': OPTIMAL_THRESHOLD * 100
+            for categoria in dados['Emprego'].unique():
+                input_df[f'Emprego_{categoria}'] = (input_df['Emprego'] == categoria).astype(int)
+            
+            # Remover colunas originais
+            input_df = input_df.drop(['Finalidade', 'Emprego'], axis=1)
+            
+            # Garantir que temos todas as colunas esperadas pelo modelo
+            if feature_names:
+                missing_cols = set(feature_names) - set(input_df.columns)
+                for col in missing_cols:
+                    input_df[col] = 0  # Preencher com zero para colunas faltantes
+                input_df = input_df[feature_names]  # Manter ordem correta
+            
+            # Fazer a previsão
+            if hasattr(model, 'predict_proba'):
+                proba = model.predict_proba(input_df)[0]
+                prob_mau_pagador = proba[1]
+                
+                # Restante do seu código de visualização...
+                classificacao = "mau pagador" if prob_mau_pagador >= OPTIMAL_THRESHOLD else "bom pagador"
+                
+                # Visualização 1: Gauge de probabilidade
+                fig_gauge = go.Figure(go.Indicator(
+                    mode="gauge+number",
+                    value=prob_mau_pagador * 100,
+                    title={'text': "Probabilidade de Inadimplência (%)"},
+                    gauge={
+                        'axis': {'range': [None, 100]},
+                        'steps': [
+                            {'range': [0, 30], 'color': "lightgreen"},
+                            {'range': [30, 70], 'color': "yellow"},
+                            {'range': [70, 100], 'color': "red"}
+                        ],
+                        'threshold': {
+                            'line': {'color': "black", 'width': 4},
+                            'thickness': 0.75,
+                            'value': OPTIMAL_THRESHOLD * 100
+                        }
                     }
+                ))
+                st.plotly_chart(fig_gauge, use_container_width=True)
+                
+                # Visualização 2: Fatores de risco
+                fatores_risco = {
+                    'Fator': ['Alavancagem', 'Risco_Atrasos', 'Historico_Risco', 'RDS'],
+                    'Valor': [Alavancagem, Risco_Atrasos, Historico_Risco, rds],
+                    'Peso': [0.4, 0.3, 0.2, 0.1]
                 }
-            ))
-            st.plotly_chart(fig_gauge, use_container_width=True)
-            
-            # Visualização 2: Fatores de risco
-            fatores_risco = {
-                'Fator': ['Alavancagem', 'Risco_Atrasos', 'Historico_Risco', 'RDS'],
-                'Valor': [Alavancagem, Risco_Atrasos, Historico_Risco, rds],
-                'Peso': [0.4, 0.3, 0.2, 0.1]  # Pesos exemplos (ajustar conforme importância real)
-            }
-            fig_fatores = px.bar(
-                fatores_risco,
-                x='Fator',
-                y='Valor',
-                color='Peso',
-                title='Principais Fatores de Risco',
-                color_continuous_scale='RdYlGn_r'
-            )
-            st.plotly_chart(fig_fatores, use_container_width=True)
-            
-            # Resultado da classificação
-            if classificacao == "mau pagador":
-                st.error(f"""
-                **ALERTA DE RISCO:** 
-                - Classificação: **Mau Pagador** 
-                - Probabilidade: {prob_mau_pagador:.2%}
-                - Limiar de decisão: {OPTIMAL_THRESHOLD:.2%}
+                fig_fatores = px.bar(
+                    fatores_risco,
+                    x='Fator',
+                    y='Valor',
+                    color='Peso',
+                    title='Principais Fatores de Risco',
+                    color_continuous_scale='RdYlGn_r'
+                )
+                st.plotly_chart(fig_fatores, use_container_width=True)
                 
-                **Fatores críticos:**
-                {', '.join([f for f, v in zip(['Alavancagem', 'Risco_Atrasos', 'Historico_Risco', 'RDS'], 
-                                            [Alavancagem, Risco_Atrasos, Historico_Risco, rds]) 
-                          if v > np.percentile(dados[[f]], 75)])}
-                """)
+                # Resultado da classificação
+                if classificacao == "mau pagador":
+                    st.error(f"""
+                    **ALERTA DE RISCO:** 
+                    - Classificação: **Mau Pagador** 
+                    - Probabilidade: {prob_mau_pagador:.2%}
+                    - Limiar de decisão: {OPTIMAL_THRESHOLD:.2%}
+                    """)
+                else:
+                    st.success(f"""
+                    **BAIXO RISCO:** 
+                    - Classificação: **Bom Pagador** 
+                    - Probabilidade: {prob_mau_pagador:.2%}
+                    - Limiar de decisão: {OPTIMAL_THRESHOLD:.2%}
+                    """)
+            
             else:
-                st.success(f"""
-                **BAIXO RISCO:** 
-                - Classificação: **Bom Pagador** 
-                - Probabilidade: {prob_mau_pagador:.2%}
-                - Limiar de decisão: {OPTIMAL_THRESHOLD:.2%}
-                
-                **Pontos positivos:**
-                {', '.join([f for f, v in zip(['Alavancagem', 'Risco_Atrasos', 'Historico_Risco', 'RDS'], 
-                                            [Alavancagem, Risco_Atrasos, Historico_Risco, rds]) 
-                          if v < np.percentile(dados[[f]], 25)])}
-                """)
+                st.error("O modelo carregado não suporta previsões de probabilidade")
                 
         except Exception as e:
             st.error(f"Erro ao processar a análise de risco: {str(e)}")
+            st.write("Dados enviados:", input_df if 'input_df' in locals() else input_data)
 
 # PÁGINA 5: IMPACTO NO NEGÓCIO
 elif pagina == "💼 Impacto no Negócio":
