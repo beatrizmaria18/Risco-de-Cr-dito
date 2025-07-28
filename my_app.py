@@ -64,7 +64,7 @@ dados = load_data(caminho_dados_csv)
 
 def load_model():
     try:
-        model_data = joblib.load('modelo_completo.pkl')
+        model_data = joblib.load('best.pkl')
         return model_data
     except Exception as e:
         st.error(f"Erro ao carregar o modelo: {str(e)}")
