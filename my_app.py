@@ -338,7 +338,7 @@ elif pagina == "⚙️ Simulador de Risco":
             # Visualização 2: Fatores de risco
             fatores_risco = {
                 'Fator': ['Alavancagem', 'Risco Atrasos', 'Histórico Risco', 'RDS'],
-                'Valor': [alavancagem, risco_atrasos, historico_risco, rds],
+                'Valor': [Alavancagem, Risco_Atrasos, Historico_Risco, rds],
                 'Peso': [0.4, 0.3, 0.2, 0.1]  # Pesos exemplos (ajustar conforme importância real)
             }
             fig_fatores = px.bar(
@@ -361,7 +361,7 @@ elif pagina == "⚙️ Simulador de Risco":
                 
                 **Fatores críticos:**
                 {', '.join([f for f, v in zip(['Alavancagem', 'Risco Atrasos', 'Histórico Risco', 'RDS'], 
-                                            [alavancagem, risco_atrasos, historico_risco, rds]) 
+                                            [Alavancagem, Risco_Atrasos, Historico_Risco, rds]) 
                           if v > np.percentile(dados[[f]], 75)])}
                 """)
             else:
@@ -373,7 +373,7 @@ elif pagina == "⚙️ Simulador de Risco":
                 
                 **Pontos positivos:**
                 {', '.join([f for f, v in zip(['Alavancagem', 'Risco Atrasos', 'Histórico Risco', 'RDS'], 
-                                            [alavancagem, risco_atrasos, historico_risco, rds]) 
+                                            [Alavancagem, Risco_Atrasos, Historico_Risco, rds]) 
                           if v < np.percentile(dados[[f]], 25)])}
                 """)
                 
