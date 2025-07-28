@@ -267,7 +267,7 @@ elif pagina == "⚙️ Simulador de Risco":
             finalidade = st.selectbox("Finalidade", options=dados['Finalidade'].unique())
             emprestimo_valor = st.slider("Valor do Empréstimo (R$)", 1000, 200000, 50000)
             valor_do_bem = st.slider("Valor do Bem (R$)", 1000, 1000000, 100000)
-            alavancagem = emprestimo_valor / (valor_do_bem + 0.001)
+            Alavancagem = emprestimo_valor / (valor_do_bem + 0.001)
             st.metric("Alavancagem", f"{alavancagem:.2f}")
             
         with col2:
@@ -275,12 +275,12 @@ elif pagina == "⚙️ Simulador de Risco":
             tempo_emprego = st.slider("Tempo no Emprego (anos)", 0.0, 40.0, 5.0)
             tempo_cliente = st.slider("Tempo como Cliente (meses)", 1.0, 500.0, 120.0)
             atrasos = st.slider("Número de Atrasos", 0, 20, 0)
-            historico_risco = tempo_cliente / (atrasos + 1)
-            st.metric("Histórico de Risco", f"{historico_risco:.2f}")
+            Historico_Risco = tempo_cliente / (atrasos + 1)
+            st.metric("Histórico de Risco", f"{Historico_Risco:.2f}")
             
         with col3:
             negativos = st.slider("Registros Negativos", 0, 10, 0)
-            risco_atrasos = negativos * atrasos
+            Risco_Atrasos = negativos * atrasos
             st.metric("Risco de Atrasos", risco_atrasos)
             rds = st.slider("Renda Comprometida (RDS %)", 0.0, 100.0, 30.0)
             lc_recente = st.slider("Linhas de Crédito Recentes", 0, 10, 1)
@@ -299,9 +299,9 @@ elif pagina == "⚙️ Simulador de Risco":
             'LC-Recente': [lc_recente],
             'LC-Atual': [lc_atual],
             'RDS': [rds],
-            'Risco_Atrasos': [risco_atrasos],
-            'Historico_Risco': [historico_risco],
-            'Alavancagem': [alavancagem]
+            'Risco_Atrasos': [Risco_Atrasos],
+            'Historico_Risco': [Historico_Risco],
+            'Alavancagem': [Alavancagem]
         }
         
         input_data = pd.DataFrame(input_data_dict)
