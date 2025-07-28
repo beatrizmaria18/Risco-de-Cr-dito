@@ -339,7 +339,7 @@ elif pagina == "⚙️ Simulador de Risco":
             
             # Visualização 2: Fatores de risco
             fatores_risco = {
-                'Fator': ['Alavancagem', 'Risco_Atrasos', 'Histórico_Risco', 'RDS'],
+                'Fator': ['Alavancagem', 'Risco_Atrasos', 'Historico_Risco', 'RDS'],
                 'Valor': [Alavancagem, Risco_Atrasos, Historico_Risco, rds],
                 'Peso': [0.4, 0.3, 0.2, 0.1]  # Pesos exemplos (ajustar conforme importância real)
             }
@@ -362,7 +362,7 @@ elif pagina == "⚙️ Simulador de Risco":
                 - Limiar de decisão: {OPTIMAL_THRESHOLD:.2%}
                 
                 **Fatores críticos:**
-                {', '.join([f for f, v in zip(['Alavancagem', 'Risco_Atrasos', 'Histórico_Risco', 'RDS'], 
+                {', '.join([f for f, v in zip(['Alavancagem', 'Risco_Atrasos', 'Historico_Risco', 'RDS'], 
                                             [Alavancagem, Risco_Atrasos, Historico_Risco, rds]) 
                           if v > np.percentile(dados[[f]], 75)])}
                 """)
