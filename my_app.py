@@ -305,7 +305,10 @@ elif pagina == "⚙️ Simulador de Risco":
         }
         
         input_data = pd.DataFrame(input_data_dict)
-        
+
+
+        st.write("Dados sendo enviados para o modelo:", input_data)
+st.write("Colunas do modelo esperadas:", model.feature_names_in_)
         try:
             # Obter probabilidades
             proba = model.predict_proba(input_data)[0]
@@ -337,7 +340,7 @@ elif pagina == "⚙️ Simulador de Risco":
             
             # Visualização 2: Fatores de risco
             fatores_risco = {
-                'Fator': ['Alavancagem', 'Risco Atrasos', 'Histórico Risco', 'RDS'],
+                'Fator': ['Alavancagem', 'Risco_Atrasos', 'Histórico_Risco', 'RDS'],
                 'Valor': [Alavancagem, Risco_Atrasos, Historico_Risco, rds],
                 'Peso': [0.4, 0.3, 0.2, 0.1]  # Pesos exemplos (ajustar conforme importância real)
             }
