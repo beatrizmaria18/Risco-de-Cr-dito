@@ -281,7 +281,7 @@ elif pagina == "⚙️ Simulador de Risco":
         with col3:
             negativos = st.slider("Registros Negativos", 0, 10, 0)
             Risco_Atrasos = negativos * atrasos
-            st.metric("Risco de Atrasos", risco_atrasos)
+            st.metric("Risco de Atrasos", Risco_Atrasos)
             rds = st.slider("Renda Comprometida (RDS %)", 0.0, 100.0, 30.0)
             lc_recente = st.slider("Linhas de Crédito Recentes", 0, 10, 1)
             lc_atual = st.slider("Linhas de Crédito Atuais", 0, 20, 5)
