@@ -305,8 +305,8 @@ elif pagina == "⚙️ Simulador de Risco":
         }
         
         input_data = pd.DataFrame(input_data_dict)
-        st.write("Dados sendo enviados para o modelo:", input_data)
-        st.write("Colunas do modelo esperadas:", model.feature_names_in_)  # Se disponível
+        if hasattr(model, 'feature_names_in_'):
+    input_data = input_data[model.feature_names_in_]
         
         try:
             # Obter probabilidades
