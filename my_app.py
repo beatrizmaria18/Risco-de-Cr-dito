@@ -374,7 +374,7 @@ elif pagina == "⚙️ Simulador de Risco":
                 - Limiar de decisão: {OPTIMAL_THRESHOLD:.2%}
                 
                 **Pontos positivos:**
-                {', '.join([f for f, v in zip(['Alavancagem', 'Risco_Atrasos', 'Histórico_Risco', 'RDS'], 
+                {', '.join([f for f, v in zip(['Alavancagem', 'Risco_Atrasos', 'Historico_Risco', 'RDS'], 
                                             [Alavancagem, Risco_Atrasos, Historico_Risco, rds]) 
                           if v < np.percentile(dados[[f]], 25)])}
                 """)
