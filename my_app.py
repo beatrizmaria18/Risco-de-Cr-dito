@@ -306,7 +306,7 @@ elif pagina == "⚙️ Simulador de Risco":
         
         input_data = pd.DataFrame(input_data_dict)
         if hasattr(model, 'feature_names_in_'):
-    input_data = input_data[model.feature_names_in_]
+            input_data = input_data[model.feature_names_in_]
         
         try:
             # Obter probabilidades
