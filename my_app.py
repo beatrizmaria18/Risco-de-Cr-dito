@@ -106,7 +106,10 @@ if pagina in ["📊 Dashboard Geral", "📈 Análise Exploratória"]:
 else:
     dados_filtrados = dados.copy()
 
-st.sidebar.info("Desenvolvido como uma ferramenta de suporte à decisão para análise de crédito.")
+#st.sidebar.info("Desenvolvido como uma ferramenta de suporte à decisão para análise de crédito.")
+
+st.sidebar.info("Desenvolvido por Beatriz Trindade como uma ferramenta de suporte à decisão para análise de crédito.")
+
 
 # --- Conteúdo das Páginas ---
 
