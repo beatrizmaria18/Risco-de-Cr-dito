@@ -283,15 +283,15 @@ with tab2:
           xaxis_title='Recall',
           yaxis_title='Precision'
     )
-    st.plotly_chart(fig_pr, use_container_width=True)
+          st.plotly_chart(fig_pr, use_container_width=True)
     
-    st.subheader("Distribuição de Probabilidades")
-    fig_dist = px.histogram(
-        x=y_proba,
-        color=y_true.map({0: 'Bom Pagador', 1: 'Mau Pagador'}),
-        nbins=50,
-        labels={'x': 'Probabilidade de Mau Pagador', 'color': 'Classe Real'},
-        title='Distribuição das Probabilidades Previstas'
+          st.subheader("Distribuição de Probabilidades")
+          fig_dist = px.histogram(
+          x=y_proba,
+          color=y_true.map({0: 'Bom Pagador', 1: 'Mau Pagador'}),
+          nbins=50,
+          labels={'x': 'Probabilidade de Mau Pagador', 'color': 'Classe Real'},
+          title='Distribuição das Probabilidades Previstas'
     )
     fig_dist.add_vline(x=OPTIMAL_THRESHOLD, line_dash="dash", line_color="red")
     st.plotly_chart(fig_dist, use_container_width=True)
