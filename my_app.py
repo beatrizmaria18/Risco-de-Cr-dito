@@ -74,6 +74,26 @@ if model is None or dados is None:
     st.error("Não foi possível carregar os arquivos necessários. Verifique os caminhos.")
     st.stop()
 
+
+
+
+# --- Função para preparar os dados para previsão ---
+def prepare_features(df):
+    """Cria as features adicionais necessárias para o modelo"""
+    df = df.copy()
+    
+    # Feature engineering (idêntico ao que foi feito no treinamento)
+    df['Risco_Atrasos'] = df['Atrasos'] * df['Negativos']
+    df['Historico_Risco'] = df['TempoCliente'] / (df['Atrasos'] + 1e-6)  # +1e-6 para evitar divisão por zero
+    df['Alavancagem'] = df['Empréstimo'] / (df['ValorDoBem'] + 0.001)  # +0.001 para evitar divisão por zero
+    
+    return df
+
+
+
+
+
+
 # --- Navegação ---
 pages = {
     "📊 Dashboard Geral": "dashboard",
@@ -108,8 +128,14 @@ if selected_page == "📊 Dashboard Geral":
     st.title("📊 Dashboard do Modelo de Risco")
     
     try:
+        if selected_page == "📊 Dashboard Geral":
+    st.title("📊 Dashboard do Modelo de Risco")
+    
+    try:
         # Preparar dados para avaliação
         X = dados.drop('Cliente', axis=1)
+        X = prepare_features(X)  # Adicionar esta linha
+        
         y_true = dados['Cliente'].map({'bom pagador': 0, 'mau pagador': 1})
         
         # Verificar se o modelo tem predict_proba
@@ -194,7 +220,10 @@ elif selected_page == "🧠 Detalhes do Modelo":
     st.markdown("Aqui exploramos o comportamento e a performance do modelo carregado.")
     
     try:
+        # Preparar os dados com todas as features necessárias
         X_raw = dados.drop('Cliente', axis=1)
+        X_raw = prepare_features(X_raw)  # Adiciona as features extras
+        
         y_true = dados['Cliente'].map({'bom pagador': 0, 'mau pagador': 1})
         y_proba = model.predict_proba(X_raw)[:, 1]
         y_pred = (y_proba >= OPTIMAL_THRESHOLD).astype(int)
@@ -203,100 +232,13 @@ elif selected_page == "🧠 Detalhes do Modelo":
         precision_points, recall_points, thresholds = precision_recall_curve(y_true, y_proba)
         recall = recall_score(y_true, y_pred)
         precision = precision_score(y_true, y_pred)
+        
     except Exception as e:
-        st.warning(f"Não foi possível gerar os gráficos de performance do modelo. Erro: {e}")
+        st.error(f"Erro ao gerar gráficos de performance: {str(e)}")
+        st.error("Verifique se todas as colunas necessárias estão presentes nos dados.")
         cm = np.array([[0, 0], [0, 0]])
         precision_points, recall_points, thresholds = [0], [0], [0]
         recall, precision = 0.0, 0.0
-    
-    tab1, tab2, tab3 = st.tabs(["Matriz de Confusão", "Curvas de Performance", "Feature Importance"])
-    
-    with tab1:
-        st.subheader("Matriz de Confusão")
-        fig_cm = go.Figure(data=go.Heatmap(
-            z=cm,
-            x=['Previsto Bom', 'Previsto Mau'],
-            y=['Real Bom', 'Real Mau'],
-            colorscale='Greens',
-            text=[[str(x) for x in row] for row in cm],
-            texttemplate="%{text}",
-            hoverongaps=False
-        ))
-        fig_cm.update_layout(title='Matriz de Confusão com Limiar Ajustado')
-        st.plotly_chart(fig_cm, use_container_width=True)
-        
-        # Detalhes da matriz
-        tn, fp, fn, tp = cm.ravel()
-        st.markdown(f"""
-        - **Verdadeiros Positivos (TP):** {tp}
-        - **Falsos Positivos (FP):** {fp}
-        - **Falsos Negativos (FN):** {fn}
-        - **Verdadeiros Negativos (TN):** {tn}
-        """)
-    
-    with tab2:
-        st.subheader("Curva Precision-Recall")
-        fig_pr = go.Figure()
-        fig_pr.add_trace(go.Scatter(
-            x=recall_points,
-            y=precision_points,
-            mode='lines',
-            name='Curva PR'
-        ))
-        fig_pr.add_shape(
-            type='line',
-            x0=0, x1=1, y0=1, y1=0,
-            line=dict(color='RoyalBlue', width=2, dash='dot')
-        )
-        fig_pr.update_layout(
-            title='Curva Precision-Recall',
-            xaxis_title='Recall',
-            yaxis_title='Precision'
-        )
-        st.plotly_chart(fig_pr, use_container_width=True)
-        
-        st.subheader("Distribuição de Probabilidades")
-        fig_dist = px.histogram(
-            x=y_proba,
-            color=y_true.map({0: 'Bom Pagador', 1: 'Mau Pagador'}),
-            nbins=50,
-            labels={'x': 'Probabilidade de Mau Pagador', 'color': 'Classe Real'},
-            title='Distribuição das Probabilidades Previstas'
-        )
-        fig_dist.add_vline(x=OPTIMAL_THRESHOLD, line_dash="dash", line_color="red")
-        st.plotly_chart(fig_dist, use_container_width=True)
-    
-    with tab3:
-        st.subheader("Importância das Features")
-        try:
-            # Verifica se o modelo tem feature_importances_
-            if hasattr(model.named_steps['classifier'], 'feature_importances_'):
-                importances = model.named_steps['classifier'].feature_importances_
-                feature_names = ['Empréstimo', 'ValorDoBem', 'TempoEmprego', 'Negativos', 
-                               'Atrasos', 'TempoCliente', 'LC-Recente', 'LC-Atual', 'RDS',
-                               'Risco_Atrasos', 'Historico_Risco', 'Alavancagem']
-                
-                # Adicionar nomes das features categóricas
-                categorical_features = ['Emprego', 'Finalidade']
-                ohe_features = model.named_steps['preprocessor'].transformers_[1][1]\
-                    .named_steps['onehot'].get_feature_names_out(categorical_features)
-                feature_names.extend(ohe_features)
-                
-                importance_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
-                importance_df = importance_df.sort_values('Importance', ascending=False).head(20)
-                
-                fig = px.bar(
-                    importance_df,
-                    x='Importance',
-                    y='Feature',
-                    orientation='h',
-                    title='Top 20 Features Mais Importantes'
-                )
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.warning("O modelo não possui atributo feature_importances_")
-        except Exception as e:
-            st.warning(f"Não foi possível extrair a importância das features. Erro: {e}")
 
 # PÁGINA 4: SIMULADOR DE RISCO
 elif selected_page == "⚙️ Simulador de Risco":
