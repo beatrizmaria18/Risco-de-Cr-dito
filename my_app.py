@@ -242,8 +242,8 @@ elif selected_page == "🧠 Detalhes do Modelo":
 
 
 tab1, tab2, tab3 = st.tabs(["Matriz de Confusão", "Curvas de Performance", "Feature Importance"])
-    
-with tab1:
+        
+        with tab1:
     st.subheader("Matriz de Confusão")
     fig_cm = go.Figure(data=go.Heatmap(
         z=cm,
@@ -266,7 +266,7 @@ with tab1:
     - **Verdadeiros Negativos (TN):** {tn}
     """)
 
-with tab2:
+        with tab2:
     st.subheader("Curva Precision-Recall")
     fig_pr = go.Figure()
     fig_pr.add_trace(go.Scatter(
@@ -298,7 +298,7 @@ with tab2:
     fig_dist.add_vline(x=OPTIMAL_THRESHOLD, line_dash="dash", line_color="red")
     st.plotly_chart(fig_dist, use_container_width=True)
 
-with tab3:
+        with tab3:
     st.subheader("Importância das Features")
     try:
         importances = model.named_steps['classifier'].feature_importances_
@@ -344,7 +344,7 @@ elif selected_page == "⚙️ Simulador de Risco":
         return input_df
 
     # Formulário principal
-    with st.form(key='risk_form'):
+    with st.form("risk_form"):
         col1, col2 = st.columns(2)
         
         with col1:
