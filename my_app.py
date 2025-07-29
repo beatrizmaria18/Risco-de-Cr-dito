@@ -249,7 +249,7 @@ elif pagina == "🧠 Detalhes do Modelo":
                 importances = model.feature_importances_
                 feature_names = X_raw.columns
 
-            importance_df = pd.DataFrame({'Feature': feature_names, 'Importancia': importances})
+            importance_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
             importance_df = importance_df.sort_values('Importance', ascending=False).head(20)
             
             fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h', title='Top 10 Features Mais Importantes')
