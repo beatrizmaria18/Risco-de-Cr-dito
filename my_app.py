@@ -252,7 +252,7 @@ elif pagina == "🧠 Detalhes do Modelo":
             importance_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
             importance_df = importance_df.sort_values('Importance', ascending=False).head(20)
             
-            fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h', title='Top 10 Features Mais Importantes')
+            fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h', title='Top 20 Features Mais Importantes')
             fig.update_layout(yaxis={'categoryorder':'total ascending'})
             st.plotly_chart(fig, use_container_width=True)
         except Exception as e:
