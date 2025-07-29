@@ -256,29 +256,29 @@ with tab1:
             fig_cm.update_layout(title='Matriz de Confusão com Limiar Ajustado')
             st.plotly_chart(fig_cm, use_container_width=True)
     
-    # Detalhes da matriz
-    tn, fp, fn, tp = cm.ravel()
-    st.markdown(f"""
-    - **Verdadeiros Positivos (TP):** {tp}
-    - **Falsos Positivos (FP):** {fp}
-    - **Falsos Negativos (FN):** {fn}
-    - **Verdadeiros Negativos (TN):** {tn}
+            # Detalhes da matriz
+            tn, fp, fn, tp = cm.ravel()
+            st.markdown(f"""
+            - **Verdadeiros Positivos (TP):** {tp}
+            - **Falsos Positivos (FP):** {fp}
+            - **Falsos Negativos (FN):** {fn}
+            - **Verdadeiros Negativos (TN):** {tn}
     """)
 with tab2:
           st.subheader("Curva Precision-Recall")
           fig_pr = go.Figure()
           fig_pr.add_trace(go.Scatter(
-        x=recall_points,
-        y=precision_points,
-        mode='lines',
-        name='Curva PR'
+          x=recall_points,
+          y=precision_points,
+          mode='lines',
+          name='Curva PR'
     ))
-    fig_pr.add_shape(
-        type='line',
-        x0=0, x1=1, y0=1, y1=0,
-        line=dict(color='RoyalBlue', width=2, dash='dot')
+          fig_pr.add_shape(
+          type='line',
+          x0=0, x1=1, y0=1, y1=0,
+          line=dict(color='RoyalBlue', width=2, dash='dot')
     )
-    fig_pr.update_layout(
+        fig_pr.update_layout(
         title='Curva Precision-Recall',
         xaxis_title='Recall',
         yaxis_title='Precision'
@@ -296,7 +296,7 @@ with tab2:
     fig_dist.add_vline(x=OPTIMAL_THRESHOLD, line_dash="dash", line_color="red")
     st.plotly_chart(fig_dist, use_container_width=True)
 with tab3:
-          st.subheader("Importância das Features")
+    st.subheader("Importância das Features")
     try:
         importances = model.named_steps['classifier'].feature_importances_
         feature_names = ['Empréstimo', 'ValorDoBem', 'TempoEmprego', 'Negativos', 
