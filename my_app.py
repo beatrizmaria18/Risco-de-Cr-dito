@@ -243,7 +243,7 @@ elif selected_page == "🧠 Detalhes do Modelo":
 
 tab1, tab2, tab3 = st.tabs(["Matriz de Confusão", "Curvas de Performance", "Feature Importance"])
     
-    with tab1:
+     with tab1:
         st.subheader("Matriz de Confusão")
         fig_cm = go.Figure(data=go.Heatmap(
             z=cm,
