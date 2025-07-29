@@ -328,6 +328,9 @@ with tab3:
 
 
 # PÁGINA 4: SIMULADOR DE RISCO
+
+
+
 elif selected_page == "⚙️ Simulador de Risco":
     st.title("⚙️ Simulador de Risco de Crédito")
     
