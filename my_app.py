@@ -278,10 +278,10 @@ with tab2:
           x0=0, x1=1, y0=1, y1=0,
           line=dict(color='RoyalBlue', width=2, dash='dot')
     )
-        fig_pr.update_layout(
-        title='Curva Precision-Recall',
-        xaxis_title='Recall',
-        yaxis_title='Precision'
+          fig_pr.update_layout(
+          title='Curva Precision-Recall',
+          xaxis_title='Recall',
+          yaxis_title='Precision'
     )
     st.plotly_chart(fig_pr, use_container_width=True)
     
