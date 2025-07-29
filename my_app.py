@@ -218,7 +218,7 @@ elif pagina == "🧠 Detalhes do Modelo":
             texttemplate="%{text}",
             hoverongaps=False
         ))
-        fig_cm.update_layout(title='Matriz de Confusão com Limiar Ajustado')
+        fig_cm.update_layout(title='')
         st.plotly_chart(fig_cm, use_container_width=True)
         tn, fp, fn, tp = cm.ravel()
         st.markdown(f"- **Verdadeiros Positivos (TP):** {tp}\n- **Falsos Positivos (FP):** {fp}\n- **Falsos Negativos (FN):** {fn}\n- **Verdadeiros Negativos (TN):** {tn}")
@@ -250,7 +250,7 @@ elif pagina == "🧠 Detalhes do Modelo":
                 feature_names = X_raw.columns
 
             importance_df = pd.DataFrame({'Feature': feature_names, 'Importancia': importances})
-            importance_df = importance_df.sort_values('Importancia', ascending=False).head(20)
+            importance_df = importance_df.sort_values('Importance', ascending=False).head(20)
             
             fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h', title='Top 10 Features Mais Importantes')
             fig.update_layout(yaxis={'categoryorder':'total ascending'})
