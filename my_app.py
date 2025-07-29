@@ -64,7 +64,7 @@ st.sidebar.markdown("---")
 st.sidebar.header("Configuração de Arquivos")
 
 model_path = st.sidebar.text_input("Caminho do modelo:", "best.pkl")
-data_path = st.sidebar.text_input("Caminho dos dados:", "dados.csv")
+data_path = st.sidebar.text_input("Caminho dos dados:", "dados1.csv")
 
 model = load_model(model_path)
 dados = load_data(data_path)
