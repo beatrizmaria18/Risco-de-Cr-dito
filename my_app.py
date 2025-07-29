@@ -243,18 +243,18 @@ elif selected_page == "🧠 Detalhes do Modelo":
 
 tab1, tab2, tab3 = st.tabs(["Matriz de Confusão", "Curvas de Performance", "Feature Importance"])
         with tab1:
-    st.subheader("Matriz de Confusão")
-    fig_cm = go.Figure(data=go.Heatmap(
-        z=cm,
-        x=['Previsto Bom', 'Previsto Mau'],
-        y=['Real Bom', 'Real Mau'],
-        colorscale='Greens',
-        text=[[str(x) for x in row] for row in cm],
-        texttemplate="%{text}",
-        hoverongaps=False
+            st.subheader("Matriz de Confusão")
+            fig_cm = go.Figure(data=go.Heatmap(
+            z=cm,
+            x=['Previsto Bom', 'Previsto Mau'],
+            y=['Real Bom', 'Real Mau'],
+            colorscale='Greens',
+            text=[[str(x) for x in row] for row in cm],
+            texttemplate="%{text}",
+            hoverongaps=False
     ))
-    fig_cm.update_layout(title='Matriz de Confusão com Limiar Ajustado')
-    st.plotly_chart(fig_cm, use_container_width=True)
+            fig_cm.update_layout(title='Matriz de Confusão com Limiar Ajustado')
+            st.plotly_chart(fig_cm, use_container_width=True)
     
     # Detalhes da matriz
     tn, fp, fn, tp = cm.ravel()
@@ -266,9 +266,9 @@ tab1, tab2, tab3 = st.tabs(["Matriz de Confusão", "Curvas de Performance", "Fea
     """)
 
         with tab2:
-    st.subheader("Curva Precision-Recall")
-    fig_pr = go.Figure()
-    fig_pr.add_trace(go.Scatter(
+          st.subheader("Curva Precision-Recall")
+          fig_pr = go.Figure()
+          fig_pr.add_trace(go.Scatter(
         x=recall_points,
         y=precision_points,
         mode='lines',
@@ -298,7 +298,7 @@ tab1, tab2, tab3 = st.tabs(["Matriz de Confusão", "Curvas de Performance", "Fea
     st.plotly_chart(fig_dist, use_container_width=True)
 
         with tab3:
-    st.subheader("Importância das Features")
+          st.subheader("Importância das Features")
     try:
         importances = model.named_steps['classifier'].feature_importances_
         feature_names = ['Empréstimo', 'ValorDoBem', 'TempoEmprego', 'Negativos', 
