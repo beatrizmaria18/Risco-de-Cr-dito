@@ -150,8 +150,8 @@ if pagina == "📊 Dashboard Geral":
 
 # PÁGINA 2: ANÁLISE EXPLORATÓRIA
 elif pagina == "📈 Análise Exploratória":
-    st.title("📈 Análise Exploratória Interativa")
-    st.markdown("Explore as relações entre as variáveis do conjunto de dados filtrado.")
+    st.title("📈 Análise Exploratória")
+    #st.markdown("Explore as relações entre as variáveis do conjunto de dados filtrado.")
     
     if not dados_filtrados.empty:
         dados_vis = prepare_features(dados_filtrados)
@@ -189,8 +189,8 @@ elif pagina == "📈 Análise Exploratória":
 
 # PÁGINA 3: DETALHES DO MODELO
 elif pagina == "🧠 Detalhes do Modelo":
-    st.title("🧠 Análise Profunda do Modelo")
-    st.markdown("Aqui exploramos o comportamento e a performance do modelo carregado.")
+    st.title("🧠 Análise do Modelo")
+    st.markdown("Comportamento e performance do modelo carregado.")
     
     try:
         X_raw = dados.drop('Cliente', axis=1)
@@ -249,10 +249,10 @@ elif pagina == "🧠 Detalhes do Modelo":
                 importances = model.feature_importances_
                 feature_names = X_raw.columns
 
-            importance_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
-            importance_df = importance_df.sort_values('Importance', ascending=False).head(20)
+            importance_df = pd.DataFrame({'Feature': feature_names, 'Importancia': importances})
+            importance_df = importance_df.sort_values('Importancia', ascending=False).head(20)
             
-            fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h', title='Top 20 Features Mais Importantes')
+            fig = px.bar(importance_df, x='Importance', y='Feature', orientation='h', title='Top 10 Features Mais Importantes')
             fig.update_layout(yaxis={'categoryorder':'total ascending'})
             st.plotly_chart(fig, use_container_width=True)
         except Exception as e:
