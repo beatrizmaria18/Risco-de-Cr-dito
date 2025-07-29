@@ -8,11 +8,13 @@
 import streamlit as st
 import pandas as pd
 import joblib
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-import numpy as np
-from sklearn.metrics import recall_score, precision_score, accuracy_score, confusion_matrix, precision_recall_curve, classification_report
-from plotly.figure_factory import create_annotated_heatmap
+from sklearn.metrics import (
+    recall_score, precision_score, accuracy_score,
+    confusion_matrix, precision_recall_curve, classification_report
+)
 
 # --- Configuração da Página ---
 st.set_page_config(
@@ -24,134 +26,65 @@ st.set_page_config(
 
 OPTIMAL_THRESHOLD = 0.42
 
-# --- Funções de Carregamento ---
+# --- Funções de Carregamento Melhoradas ---
 @st.cache_resource
-def load_model(caminho_modelo):
-    """Carrega o pipeline completo com ExtraTrees"""
+def load_model(model_path):
+    """Carrega o modelo corretamente, tratando casos onde foi salvo como dicionário"""
     try:
-        return joblib.load(caminho_modelo)
+        model = joblib.load(model_path)
+        
+        # Se o modelo foi salvo como dicionário (contendo pipeline e metadados)
+        if isinstance(model, dict):
+            if 'model' in model:
+                return model['model']
+            elif 'pipeline' in model:
+                return model['pipeline']
+            else:
+                st.error("Arquivo de modelo inválido: dicionário sem chave 'model' ou 'pipeline'")
+                return None
+        return model
     except Exception as e:
-        st.error(f"ERRO AO CARREGAR O MODELO: Verifique o nome do ficheiro e as dependências. Erro: {e}")
+        st.error(f"ERRO AO CARREGAR MODELO: {str(e)}")
         return None
 
 @st.cache_data
-def load_data(caminho_dados):
-    """Carrega os dados para a análise exploratória."""
+def load_data(data_path):
+    """Carrega e pré-processa os dados"""
     try:
-        dados = pd.read_csv(caminho_dados)
-        # Pré-processamento básico
-        dados['RDS'] = dados['RDS'].astype(str).str.replace('%', '', regex=False)
-        dados['RDS'] = pd.to_numeric(dados['RDS'], errors='coerce')
+        dados = pd.read_csv(data_path)
+        dados['RDS'] = dados['RDS'].astype(str).str.replace('%', '').astype(float)
         return dados
     except Exception as e:
-        st.error(f"ERRO AO CARREGAR OS DADOS: Verifique o nome do ficheiro '{caminho_dados}'. Erro: {e}")
+        st.error(f"ERRO AO CARREGAR DADOS: {str(e)}")
         return None
 
-# --- Barra Lateral e Carregamento dos Ficheiros ---
+# --- Carregamento dos Arquivos ---
 st.sidebar.title("🏦 Dashboard de Risco")
 st.sidebar.markdown("---")
-st.sidebar.header("Configuração de Ficheiros")
+st.sidebar.header("Configuração de Arquivos")
 
-caminho_modelo_pkl = st.sidebar.text_input("Nome do seu ficheiro de modelo:", "best.pkl")
-caminho_dados_csv = st.sidebar.text_input("Nome do seu ficheiro de dados:", "dados1.csv")
+model_path = st.sidebar.text_input("Caminho do modelo:", "best.pkl")
+data_path = st.sidebar.text_input("Caminho dos dados:", "dados.csv")
 
-model = load_model(caminho_modelo_pkl)
-dados = load_data(caminho_dados_csv)
+model = load_model(model_path)
+dados = load_data(data_path)
 
+# --- Verificação de Carregamento ---
+if model is None or dados is None:
+    st.error("Não foi possível carregar os arquivos necessários. Verifique os caminhos.")
+    st.stop()
 
+# --- Navegação ---
+pages = {
+    "📊 Dashboard Geral": "dashboard",
+    "📈 Análise Exploratória": "analise",
+    "🧠 Detalhes do Modelo": "modelo",
+    "⚙️ Simulador de Risco": "simulador",
+    "💼 Impacto no Negócio": "impacto"
+}
 
-def load_model():
-    try:
-        # Supondo que seu arquivo salvo contém o pipeline direto
-        model = joblib.load('best.pkl')  # Ou 'modelo_completo.pkl'
-        
-        # Verificar se é um dicionário (caso antigo) ou o modelo/pipeline direto
-        if isinstance(model, dict):
-            st.warning("Modelo carregado como dicionário - extraindo o pipeline...")
-            return model['pipeline']  # Ou model['model'] conforme sua estrutura
-        else:
-            return model
-            
-    except Exception as e:
-        st.error(f"Erro ao carregar o modelo: {str(e)}")
-        st.stop()
-
-# Carregar o modelo
-pipeline = load_model()
-
-# Função para preparar dados de entrada
-def prepare_input(form_data):
-    input_df = pd.DataFrame([form_data])
-    
-    # Feature engineering (DEVE SER IDÊNTICO AO TREINO)
-    input_df['Risco_Atrasos'] = input_df['Atrasos'] * input_df['Negativos']
-    input_df['Historico_Risco'] = input_df['TempoCliente'] / (input_df['Atrasos'] + 1e-6)
-    input_df['Alavancagem'] = input_df['Empréstimo'] / (input_df['ValorDoBem'] + 0.001)
-    
-    # Verificar e adicionar colunas faltantes (one-hot)
-    expected_columns = [
-        'Alavancagem',
-        'Emprego_Autônomo',
-        'Emprego_Comissionado',
-        'Emprego_Geral',
-        'Emprego_Gerente',
-        #... adicione todas as outras colunas que seu modelo espera
-    ]
-    
-    for col in expected_columns:
-        if col not in input_df.columns:
-            if col.startswith('Emprego_'):
-                # Se for uma coluna one-hot, preencher com 0 ou 1 conforme o valor selecionado
-                emprego_value = col.replace('Emprego_', '')
-                input_df[col] = 1 if form_data['Emprego'] == emprego_value else 0
-            else:
-                input_df[col] = 0  # Preencher outras colunas com 0
-    
-    return input_df[expected_columns]  # Manter a ordem correta
-
-# Interface do Streamlit
-with st.form("form_risco"):
-    # Campos do formulário
-    emprego = st.selectbox("Emprego", options=['Autônomo', 'Comissionado', 'Geral', 'Gerente', 'Outros'])
-    finalidade = st.selectbox("Finalidade", options=['Pessoal', 'Comercial'])
-    atrasos = st.number_input("Atrasos", min_value=0, value=0)
-    negativos = st.number_input("Negativos", min_value=0, value=0)
-    tempo_cliente = st.number_input("Tempo como Cliente", min_value=0, value=12)
-    emprestimo = st.number_input("Valor do Empréstimo", min_value=0, value=10000)
-    valor_bem = st.number_input("Valor do Bem", min_value=0, value=20000)
-    
-    if st.form_submit_button("Calcular Risco"):
-        form_data = {
-            'Emprego': emprego,
-            'Finalidade': finalidade,
-            'Atrasos': atrasos,
-            'Negativos': negativos,
-            'TempoCliente': tempo_cliente,
-            'Empréstimo': emprestimo,
-            'ValorDoBem': valor_bem
-        }
-        
-        try:
-            # Preparar dados
-            input_data = prepare_input(form_data)
-            
-            # Verificar se o objeto tem predict_proba
-            if hasattr(pipeline, 'predict_proba'):
-                proba = pipeline.predict_proba(input_data)[0][1]
-                st.success(f"Probabilidade de mau pagador: {proba:.1%}")
-            else:
-                st.error("O modelo carregado não tem método predict_proba()")
-            
-        except Exception as e:
-            st.error(f"Erro ao processar: {str(e)}")
-            st.write("Dados enviados:", input_data)
-
-
-
-
-
-
-
+selected_page = st.sidebar.radio("Navegue pelas seções:", list(pages.keys()))
+st.sidebar.markdown("---")
 
 
 
@@ -184,34 +117,47 @@ if model is None or dados is None:
 # --- Conteúdo das Páginas ---
 
 # PÁGINA 1: DASHBOARD GERAL
-if pagina == "📊 Dashboard Geral":
+if selected_page == "📊 Dashboard Geral":
     st.title("📊 Dashboard do Modelo de Risco")
-    st.markdown("Visão geral do desempenho do modelo e da distribuição dos dados.")
-
+    
     try:
-        X_raw = dados.drop('Cliente', axis=1)
+        # Preparar dados para avaliação
+        X = dados.drop('Cliente', axis=1)
         y_true = dados['Cliente'].map({'bom pagador': 0, 'mau pagador': 1})
-        y_proba = model.predict_proba(X_raw)[:, 1]
+        
+        # Verificar se o modelo tem predict_proba
+        if not hasattr(model, 'predict_proba'):
+            st.error("O modelo carregado não suporta previsões de probabilidade")
+            st.stop()
+            
+        y_proba = model.predict_proba(X)[:, 1]
         y_pred = (y_proba >= OPTIMAL_THRESHOLD).astype(int)
         
+        # Calcular métricas
         recall = recall_score(y_true, y_pred)
         precision = precision_score(y_true, y_pred)
         accuracy = accuracy_score(y_true, y_pred)
+        
+        # Exibir métricas
+        cols = st.columns(3)
+        cols[0].metric("Recall", f"{recall:.2%}", 
+                      help="Capacidade de identificar maus pagadores")
+        cols[1].metric("Precisão", f"{precision:.2%}", 
+                      help="Acerto ao classificar como mau pagador")
+        cols[2].metric("Acurácia", f"{accuracy:.2%}", 
+                      help="Percentual total de acertos")
+        
+        # Gráfico de distribuição
+        fig = px.pie(
+            dados['Cliente'].value_counts().reset_index(),
+            values='count',
+            names='Cliente',
+            title='Distribuição de Clientes'
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
     except Exception as e:
-        st.warning(f"Não foi possível calcular as métricas de performance. Verifique os dados e o modelo. Erro: {e}")
-        recall, precision, accuracy = 0.0, 0.0, 0.0
-
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Recall do Modelo", f"{recall:.2%}", help="Capacidade de identificar os 'maus pagadores'.")
-    col2.metric("Precisão do Modelo", f"{precision:.2%}", help="Assertividade do modelo ao classificar um cliente como 'mau pagador'.")
-    col3.metric("Acurácia Geral", f"{accuracy:.2%}", help="Percentual geral de acertos do modelo.")
-    col4.metric("Taxa de Inadimplência", f"{(dados_filtrados['Cliente'] == 'mau pagador').mean():.2%}", "Observada nos dados filtrados")
-
-    st.markdown("---")
-    st.subheader("Distribuição de Clientes")
-    cliente_counts = dados_filtrados['Cliente'].value_counts()
-    fig_pie = px.pie(values=cliente_counts.values, names=cliente_counts.index, title='Proporção de Bons vs. Maus Pagadores', hole=.3)
-    st.plotly_chart(fig_pie, use_container_width=True)
+        st.error(f"Erro ao calcular métricas: {str(e)}")
 
 # PÁGINA 2: ANÁLISE EXPLORATÓRIA
 elif pagina == "📈 Análise Exploratória":
@@ -355,98 +301,81 @@ elif pagina == "🧠 Detalhes do Modelo":
             st.warning(f"Não foi possível extrair a importância das features. Erro: {e}")
 
 # PÁGINA 4: SIMULADOR DE RISCO
-elif pagina == "⚙️ Simulador de Risco":
-    st.title("⚙️ Simulador Interativo de Risco de Crédito")
-    st.markdown("Insira os dados de um novo solicitante para obter uma análise de risco em tempo real.")
+elif selected_page == "⚙️ Simulador de Risco":
+    st.title("⚙️ Simulador de Risco de Crédito")
+    
+    # Função para preparar dados de entrada
+    def prepare_input(form_data):
+        input_df = pd.DataFrame([form_data])
+        
+        # Feature engineering (idêntico ao treinamento)
+        input_df['Risco_Atrasos'] = input_df['Atrasos'] * input_df['Negativos']
+        input_df['Historico_Risco'] = input_df['TempoCliente'] / (input_df['Atrasos'] + 1e-6)
+        input_df['Alavancagem'] = input_df['Empréstimo'] / (input_df['ValorDoBem'] + 0.001)
+        
+        # One-hot encoding manual
+        for cat in dados['Finalidade'].unique():
+            input_df[f'Finalidade_{cat}'] = (input_df['Finalidade'] == cat).astype(int)
+        
+        for cat in dados['Emprego'].unique():
+            input_df[f'Emprego_{cat}'] = (input_df['Emprego'] == cat).astype(int)
+        
+        # Remover colunas originais
+        return input_df.drop(['Finalidade', 'Emprego'], axis=1)
 
-    # Carregar metadados do modelo (se existirem)
-    try:
-        metadata = joblib.load('model_metadata.pkl')
-        feature_names = metadata.get('feature_names', [])
-    except:
-        feature_names = []
-        st.warning("Metadados do modelo não encontrados. Usando configuração padrão.")
-
-    with st.expander("Clique aqui para preencher o formulário do cliente", expanded=True):
-        col1, col2, col3 = st.columns(3)
+    # Interface do formulário
+    with st.form("risk_form"):
+        col1, col2 = st.columns(2)
+        
         with col1:
-            finalidade = st.selectbox("Finalidade", options=dados['Finalidade'].unique())
-            emprestimo_valor = st.slider("Valor do Empréstimo (R$)", 1000, 200000, 50000)
-            valor_do_bem = st.slider("Valor do Bem (R$)", 1000, 1000000, 100000)
-            Alavancagem = emprestimo_valor / (valor_do_bem + 0.001)
-            st.metric("Alavancagem", f"{Alavancagem:.2f}")
+            finalidade = st.selectbox("Finalidade", dados['Finalidade'].unique())
+            emprego = st.selectbox("Emprego", dados['Emprego'].unique())
+            emprestimo = st.number_input("Valor do Empréstimo (R$)", 
+                                       min_value=1000, value=50000, step=1000)
+            valor_bem = st.number_input("Valor do Bem (R$)", 
+                                      min_value=1000, value=100000, step=1000)
             
         with col2:
-            emprego = st.selectbox("Tipo de Emprego", options=dados['Emprego'].unique())
-            tempo_emprego = st.slider("Tempo no Emprego (anos)", 0.0, 40.0, 5.0)
-            tempo_cliente = st.slider("Tempo como Cliente (meses)", 1.0, 500.0, 120.0)
-            atrasos = st.slider("Número de Atrasos", 0, 20, 0)
-            Historico_Risco = tempo_cliente / (atrasos + 1)
-            st.metric("Histórico de Risco", f"{Historico_Risco:.2f}")
-            
-        with col3:
-            negativos = st.slider("Registros Negativos", 0, 10, 0)
-            Risco_Atrasos = negativos * atrasos
-            st.metric("Risco de Atrasos", Risco_Atrasos)
+            atrasos = st.number_input("Atrasos", min_value=0, value=0)
+            negativos = st.number_input("Negativos", min_value=0, value=0)
+            tempo_cliente = st.number_input("Tempo como Cliente (meses)", 
+                                          min_value=1, value=120)
             rds = st.slider("Renda Comprometida (RDS %)", 0.0, 100.0, 30.0)
-            lc_recente = st.slider("Linhas de Crédito Recentes", 0, 10, 1)
-            lc_atual = st.slider("Linhas de Crédito Atuais", 0, 20, 5)
-
-    if st.button("Analisar Risco do Cliente", type="primary"):
-        # Preparar dados de entrada no formato correto
-        input_data = {
-            'Empréstimo': emprestimo_valor,
-            'ValorDoBem': valor_do_bem,
-            'Finalidade': finalidade,
-            'Emprego': emprego,
-            'TempoEmprego': tempo_emprego,
-            'Negativos': negativos,
-            'Atrasos': atrasos,
-            'TempoCliente': tempo_cliente,
-            'LC-Recente': lc_recente,
-            'LC-Atual': lc_atual,
-            'RDS': rds,
-            'Risco_Atrasos': Risco_Atrasos,
-            'Historico_Risco': Historico_Risco,
-            'Alavancagem': Alavancagem
-        }
         
-        try:
-            # Converter para DataFrame
-            input_df = pd.DataFrame([input_data])
+        if st.form_submit_button("Calcular Risco"):
+            form_data = {
+                'Finalidade': finalidade,
+                'Emprego': emprego,
+                'Empréstimo': emprestimo,
+                'ValorDoBem': valor_bem,
+                'Atrasos': atrasos,
+                'Negativos': negativos,
+                'TempoCliente': tempo_cliente,
+                'RDS': rds,
+                'LC-Recente': 0,  # Valores padrão
+                'LC-Atual': 0
+            }
             
-            # Aplicar one-hot encoding manualmente
-            for categoria in dados['Finalidade'].unique():
-                input_df[f'Finalidade_{categoria}'] = (input_df['Finalidade'] == categoria).astype(int)
-            
-            for categoria in dados['Emprego'].unique():
-                input_df[f'Emprego_{categoria}'] = (input_df['Emprego'] == categoria).astype(int)
-            
-            # Remover colunas originais
-            input_df = input_df.drop(['Finalidade', 'Emprego'], axis=1)
-            
-            # Garantir que temos todas as colunas esperadas pelo modelo
-            if feature_names:
-                missing_cols = set(feature_names) - set(input_df.columns)
-                for col in missing_cols:
-                    input_df[col] = 0  # Preencher com zero para colunas faltantes
-                input_df = input_df[feature_names]  # Manter ordem correta
-            
-            # Fazer a previsão
-            if hasattr(model, 'predict_proba'):
-                proba = model.predict_proba(input_df)[0]
-                prob_mau_pagador = proba[1]
+            try:
+                input_data = prepare_input(form_data)
                 
-                # Restante do seu código de visualização...
-                classificacao = "mau pagador" if prob_mau_pagador >= OPTIMAL_THRESHOLD else "bom pagador"
+                # Verificação final antes da previsão
+                if not hasattr(model, 'predict_proba'):
+                    st.error("O modelo não possui método predict_proba()")
+                    st.stop()
                 
-                # Visualização 1: Gauge de probabilidade
-                fig_gauge = go.Figure(go.Indicator(
+                proba = model.predict_proba(input_data)[0][1]
+                
+                # Visualização dos resultados
+                st.success(f"Probabilidade de mau pagador: {proba:.2%}")
+                
+                # Gauge de probabilidade
+                fig = go.Figure(go.Indicator(
                     mode="gauge+number",
-                    value=prob_mau_pagador * 100,
-                    title={'text': "Probabilidade de Inadimplência (%)"},
+                    value=proba*100,
+                    title="Probabilidade de Inadimplência",
                     gauge={
-                        'axis': {'range': [None, 100]},
+                        'axis': {'range': [0, 100]},
                         'steps': [
                             {'range': [0, 30], 'color': "lightgreen"},
                             {'range': [30, 70], 'color': "yellow"},
@@ -459,46 +388,17 @@ elif pagina == "⚙️ Simulador de Risco":
                         }
                     }
                 ))
-                st.plotly_chart(fig_gauge, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True)
                 
-                # Visualização 2: Fatores de risco
-                fatores_risco = {
-                    'Fator': ['Alavancagem', 'Risco_Atrasos', 'Historico_Risco', 'RDS'],
-                    'Valor': [Alavancagem, Risco_Atrasos, Historico_Risco, rds],
-                    'Peso': [0.4, 0.3, 0.2, 0.1]
-                }
-                fig_fatores = px.bar(
-                    fatores_risco,
-                    x='Fator',
-                    y='Valor',
-                    color='Peso',
-                    title='Principais Fatores de Risco',
-                    color_continuous_scale='RdYlGn_r'
-                )
-                st.plotly_chart(fig_fatores, use_container_width=True)
-                
-                # Resultado da classificação
-                if classificacao == "mau pagador":
-                    st.error(f"""
-                    **ALERTA DE RISCO:** 
-                    - Classificação: **Mau Pagador** 
-                    - Probabilidade: {prob_mau_pagador:.2%}
-                    - Limiar de decisão: {OPTIMAL_THRESHOLD:.2%}
-                    """)
+                # Classificação final
+                if proba >= OPTIMAL_THRESHOLD:
+                    st.error("Classificação: Mau Pagador (risco alto)")
                 else:
-                    st.success(f"""
-                    **BAIXO RISCO:** 
-                    - Classificação: **Bom Pagador** 
-                    - Probabilidade: {prob_mau_pagador:.2%}
-                    - Limiar de decisão: {OPTIMAL_THRESHOLD:.2%}
-                    """)
-            
-            else:
-                st.error("O modelo carregado não suporta previsões de probabilidade")
+                    st.success("Classificação: Bom Pagador (risco baixo)")
                 
-        except Exception as e:
-            st.error(f"Erro ao processar a análise de risco: {str(e)}")
-            st.write("Dados enviados:", input_df if 'input_df' in locals() else input_data)
+            except Exception as e:
+                st.error(f"Erro na previsão: {str(e)}")
+                st.write("Dados enviados:", input_data)
 
 # PÁGINA 5: IMPACTO NO NEGÓCIO
 elif pagina == "💼 Impacto no Negócio":
