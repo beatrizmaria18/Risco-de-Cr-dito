@@ -293,8 +293,8 @@ with tab2:
           labels={'x': 'Probabilidade de Mau Pagador', 'color': 'Classe Real'},
           title='Distribuição das Probabilidades Previstas'
     )
-    fig_dist.add_vline(x=OPTIMAL_THRESHOLD, line_dash="dash", line_color="red")
-    st.plotly_chart(fig_dist, use_container_width=True)
+          fig_dist.add_vline(x=OPTIMAL_THRESHOLD, line_dash="dash", line_color="red")
+          st.plotly_chart(fig_dist, use_container_width=True)
 with tab3:
     st.subheader("Importância das Features")
     try:
