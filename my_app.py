@@ -243,89 +243,88 @@ elif selected_page == "🧠 Detalhes do Modelo":
 
 tab1, tab2, tab3 = st.tabs(["Matriz de Confusão", "Curvas de Performance", "Feature Importance"])
     
-     with tab1:
-        st.subheader("Matriz de Confusão")
-        fig_cm = go.Figure(data=go.Heatmap(
-            z=cm,
-            x=['Previsto Bom', 'Previsto Mau'],
-            y=['Real Bom', 'Real Mau'],
-            colorscale='Greens',
-            text=[[str(x) for x in row] for row in cm],
-            texttemplate="%{text}",
-            hoverongaps=False
-        ))
-        fig_cm.update_layout(title='Matriz de Confusão com Limiar Ajustado')
-        st.plotly_chart(fig_cm, use_container_width=True)
-        
-        # Detalhes da matriz
-        tn, fp, fn, tp = cm.ravel()
-        st.markdown(f"""
-        - **Verdadeiros Positivos (TP):** {tp}
-        - **Falsos Positivos (FP):** {fp}
-        - **Falsos Negativos (FN):** {fn}
-        - **Verdadeiros Negativos (TN):** {tn}
-        """)
+with tab1:
+    st.subheader("Matriz de Confusão")
+    fig_cm = go.Figure(data=go.Heatmap(
+        z=cm,
+        x=['Previsto Bom', 'Previsto Mau'],
+        y=['Real Bom', 'Real Mau'],
+        colorscale='Greens',
+        text=[[str(x) for x in row] for row in cm],
+        texttemplate="%{text}",
+        hoverongaps=False
+    ))
+    fig_cm.update_layout(title='Matriz de Confusão com Limiar Ajustado')
+    st.plotly_chart(fig_cm, use_container_width=True)
     
-    with tab2:
-        st.subheader("Curva Precision-Recall")
-        fig_pr = go.Figure()
-        fig_pr.add_trace(go.Scatter(
-            x=recall_points,
-            y=precision_points,
-            mode='lines',
-            name='Curva PR'
-        ))
-        fig_pr.add_shape(
-            type='line',
-            x0=0, x1=1, y0=1, y1=0,
-            line=dict(color='RoyalBlue', width=2, dash='dot')
-        )
-        fig_pr.update_layout(
-            title='Curva Precision-Recall',
-            xaxis_title='Recall',
-            yaxis_title='Precision'
-        )
-        st.plotly_chart(fig_pr, use_container_width=True)
-        
-        st.subheader("Distribuição de Probabilidades")
-        fig_dist = px.histogram(
-            x=y_proba,
-            color=y_true.map({0: 'Bom Pagador', 1: 'Mau Pagador'}),
-            nbins=50,
-            labels={'x': 'Probabilidade de Mau Pagador', 'color': 'Classe Real'},
-            title='Distribuição das Probabilidades Previstas'
-        )
-        fig_dist.add_vline(x=OPTIMAL_THRESHOLD, line_dash="dash", line_color="red")
-        st.plotly_chart(fig_dist, use_container_width=True)
-    
-    with tab3:
-        st.subheader("Importância das Features")
-        try:
-            importances = model.named_steps['classifier'].feature_importances_
-            feature_names = ['Empréstimo', 'ValorDoBem', 'TempoEmprego', 'Negativos', 
-                           'Atrasos', 'TempoCliente', 'LC-Recente', 'LC-Atual', 'RDS',
-                           'Risco_Atrasos', 'Historico_Risco', 'Alavancagem']
-            
-            # Adicionar nomes das features categóricas
-            categorical_features = ['Emprego', 'Finalidade']
-            ohe_features = model.named_steps['preprocessor'].transformers_[1][1]\
-                .named_steps['onehot'].get_feature_names_out(categorical_features)
-            feature_names.extend(ohe_features)
-            
-            importance_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
-            importance_df = importance_df.sort_values('Importance', ascending=False).head(20)
-            
-            fig = px.bar(
-                importance_df,
-                x='Importance',
-                y='Feature',
-                orientation='h',
-                title='Top 20 Features Mais Importantes'
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        except Exception as e:
-            st.warning(f"Não foi possível extrair a importância das features. Erro: {e}")
+    # Detalhes da matriz
+    tn, fp, fn, tp = cm.ravel()
+    st.markdown(f"""
+    - **Verdadeiros Positivos (TP):** {tp}
+    - **Falsos Positivos (FP):** {fp}
+    - **Falsos Negativos (FN):** {fn}
+    - **Verdadeiros Negativos (TN):** {tn}
+    """)
 
+with tab2:
+    st.subheader("Curva Precision-Recall")
+    fig_pr = go.Figure()
+    fig_pr.add_trace(go.Scatter(
+        x=recall_points,
+        y=precision_points,
+        mode='lines',
+        name='Curva PR'
+    ))
+    fig_pr.add_shape(
+        type='line',
+        x0=0, x1=1, y0=1, y1=0,
+        line=dict(color='RoyalBlue', width=2, dash='dot')
+    )
+    fig_pr.update_layout(
+        title='Curva Precision-Recall',
+        xaxis_title='Recall',
+        yaxis_title='Precision'
+    )
+    st.plotly_chart(fig_pr, use_container_width=True)
+    
+    st.subheader("Distribuição de Probabilidades")
+    fig_dist = px.histogram(
+        x=y_proba,
+        color=y_true.map({0: 'Bom Pagador', 1: 'Mau Pagador'}),
+        nbins=50,
+        labels={'x': 'Probabilidade de Mau Pagador', 'color': 'Classe Real'},
+        title='Distribuição das Probabilidades Previstas'
+    )
+    fig_dist.add_vline(x=OPTIMAL_THRESHOLD, line_dash="dash", line_color="red")
+    st.plotly_chart(fig_dist, use_container_width=True)
+
+with tab3:
+    st.subheader("Importância das Features")
+    try:
+        importances = model.named_steps['classifier'].feature_importances_
+        feature_names = ['Empréstimo', 'ValorDoBem', 'TempoEmprego', 'Negativos', 
+                       'Atrasos', 'TempoCliente', 'LC-Recente', 'LC-Atual', 'RDS',
+                       'Risco_Atrasos', 'Historico_Risco', 'Alavancagem']
+        
+        # Adicionar nomes das features categóricas
+        categorical_features = ['Emprego', 'Finalidade']
+        ohe_features = model.named_steps['preprocessor'].transformers_[1][1]\
+            .named_steps['onehot'].get_feature_names_out(categorical_features)
+        feature_names.extend(ohe_features)
+        
+        importance_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
+        importance_df = importance_df.sort_values('Importance', ascending=False).head(20)
+        
+        fig = px.bar(
+            importance_df,
+            x='Importance',
+            y='Feature',
+            orientation='h',
+            title='Top 20 Features Mais Importantes'
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    except Exception as e:
+        st.warning(f"Não foi possível extrair a importância das features. Erro: {e}")
 
 
 # PÁGINA 4: SIMULADOR DE RISCO
