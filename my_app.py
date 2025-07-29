@@ -145,6 +145,10 @@ if selected_page == "📊 Dashboard Geral":
             
         y_proba = model.predict_proba(X)[:, 1]
         y_pred = (y_proba >= OPTIMAL_THRESHOLD).astype(int)
+
+        except Exception as e:
+          st.error(f"Erro ao preparar dados para avaliação: {str(e)}")
+          st.stop()
         
         # Calcular métricas
         recall = recall_score(y_true, y_pred)
