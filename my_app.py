@@ -242,7 +242,7 @@ elif selected_page == "🧠 Detalhes do Modelo":
 
 
 tab1, tab2, tab3 = st.tabs(["Matriz de Confusão", "Curvas de Performance", "Feature Importance"])
-        with tab1:
+with tab1:
             st.subheader("Matriz de Confusão")
             fig_cm = go.Figure(data=go.Heatmap(
             z=cm,
@@ -264,8 +264,7 @@ tab1, tab2, tab3 = st.tabs(["Matriz de Confusão", "Curvas de Performance", "Fea
     - **Falsos Negativos (FN):** {fn}
     - **Verdadeiros Negativos (TN):** {tn}
     """)
-
-        with tab2:
+with tab2:
           st.subheader("Curva Precision-Recall")
           fig_pr = go.Figure()
           fig_pr.add_trace(go.Scatter(
@@ -296,8 +295,7 @@ tab1, tab2, tab3 = st.tabs(["Matriz de Confusão", "Curvas de Performance", "Fea
     )
     fig_dist.add_vline(x=OPTIMAL_THRESHOLD, line_dash="dash", line_color="red")
     st.plotly_chart(fig_dist, use_container_width=True)
-
-        with tab3:
+with tab3:
           st.subheader("Importância das Features")
     try:
         importances = model.named_steps['classifier'].feature_importances_
