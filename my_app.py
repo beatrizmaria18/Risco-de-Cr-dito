@@ -113,6 +113,39 @@ st.sidebar.info("Desenvolvido como uma ferramenta de suporte à decisão para an
 # PÁGINA 1: DASHBOARD GERAL
 if pagina == "📊 Dashboard Geral":
     st.title("📊 Dashboard do Modelo de Risco")
+
+    with st.expander("Clique aqui para ver o resumo da metodologia do projeto"):
+        st.markdown("""
+        O trabalho realizado com a base de dados envolveu preparação dos dados, desenvolvimento do modelo e avaliação de 
+        performance, implementado através de um pipeline reprodutível. O processo iniciou com a carga do arquivo 'dados.csv', onde foi necessário
+        um primeiro tratamento na coluna RDS, convertendo seus valores de string (com o caractere '%') para numéricos do tipo float, permitindo 
+        sua utilização pelo modelo.
+        
+        Um passo importante foi a transformação da variável target 'Cliente', originalmente
+        em formato textual ('bom pagador'/'mau pagador'), em valores numéricos 
+        (0 e 1 respectivamente), adequando ela para o processo de modelagem. O 
+        pré-processamento contou com a criação de três novas variáveis: 'Risco_Atrasos' (combinação 
+        multiplicativa entre atrasos e registros negativos), 'Historico_Risco' 
+        (razão entre tempo como cliente e atrasos) e 'Alavancagem' (relação entre valor do empréstimo e valor do 
+        bem).
+        
+        O tratamento de dados faltantes foi implementado com duas estratégias: para variáveis numéricas, utilizou-se a 
+        mediana como valor de imputação, enquanto para categóricas, optou-se 
+        pelo preenchimento com a string 'missing'. Esta abordagem garantiu a 
+        preservação da estrutura dos dados mesmo na presença de valores ausentes.
+        
+        Através do ColumnTransformer, foram estabelecidos fluxos distintos de 
+        processamento: para features numéricas, aplicou-se a padronização 
+        (StandardScaler) após a imputação de valores; para categóricas, 
+        implementamos one-hot encoding com tratamento para categorias 
+        desconhecidas. O modelo escolhido foi uma Random Forest, configurada com
+        100 árvores (n_estimators=100), balanceamento automático de classes 
+        para lidar com possíveis desequilíbrios, e paralelização para eficiência computacional.
+        
+        A avaliação do modelo foi feita com divisão estratificada dos dados 
+        (80/20) e cálculo de métricas como F1, Recall, Precision e AUC-ROC. A análise visual foi feita com a matriz de confusão e curva ROC. O modelo final foi feito com toda a estrutura de pré-processamento, 
+        garantindo que novas previsões mantenham a mesma qualidade das desenvolvidas durante o treinamento.
+        """)
     
     try:
         X = dados.drop('Cliente', axis=1)
