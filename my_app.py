@@ -335,25 +335,66 @@ elif selected_page == "⚙️ Simulador de Risco":
     def prepare_input(form_data):
         input_df = pd.DataFrame([form_data])
         
-        # Feature engineering (idêntico ao treinamento)
+        # Feature engineering
         input_df['Risco_Atrasos'] = input_df['Atrasos'] * input_df['Negativos']
         input_df['Historico_Risco'] = input_df['TempoCliente'] / (input_df['Atrasos'] + 1e-6)
         input_df['Alavancagem'] = input_df['Empréstimo'] / (input_df['ValorDoBem'] + 0.001)
         
-        # Garantir todas as colunas necessárias
-        for col in ['Emprego', 'TempoEmprego', 'Finalidade', 'LC-Recente', 'LC-Atual']:
+        # Garantir colunas necessárias
+        required_cols = ['Emprego', 'TempoEmprego', 'Finalidade', 'LC-Recente', 'LC-Atual']
+        for col in required_cols:
             if col not in input_df.columns:
                 input_df[col] = 0  # Valor padrão
                 
-        # One-hot encoding manual
-        for cat in dados['Finalidade'].unique():
-            input_df[f'Finalidade_{cat}'] = (input_df['Finalidade'] == cat).astype(int)
-        
-        for cat in dados['Emprego'].unique():
-            input_df[f'Emprego_{cat}'] = (input_df['Emprego'] == cat).astype(int)
-        
         return input_df
 
+    # Formulário
+    with st.form("risk_form"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            finalidade = st.selectbox("Finalidade", dados['Finalidade'].unique())
+            emprego = st.selectbox("Emprego", dados['Emprego'].unique())
+            emprestimo = st.number_input("Valor do Empréstimo (R$)", min_value=1000, value=50000, step=1000)
+            valor_bem = st.number_input("Valor do Bem (R$)", min_value=1000, value=100000, step=1000)
+            tempo_emprego = st.number_input("Tempo no Emprego (meses)", min_value=0, value=24)
+            
+        with col2:
+            atrasos = st.number_input("Atrasos", min_value=0, value=0)
+            negativos = st.number_input("Negativos", min_value=0, value=0)
+            tempo_cliente = st.number_input("Tempo como Cliente (meses)", min_value=1, value=120)
+            rds = st.slider("Renda Comprometida (RDS %)", 0.0, 100.0, 30.0)
+            lc_recente = st.number_input("LC Recente", min_value=0, value=0)
+            lc_atual = st.number_input("LC Atual", min_value=0, value=0)
+        
+        submitted = st.form_submit_button("Calcular Risco")
+        
+        if submitted:
+            form_data = {
+                'Finalidade': finalidade,
+                'Emprego': emprego,
+                'Empréstimo': emprestimo,
+                'ValorDoBem': valor_bem,
+                'Atrasos': atrasos,
+                'Negativos': negativos,
+                'TempoCliente': tempo_cliente,
+                'TempoEmprego': tempo_emprego,
+                'RDS': rds,
+                'LC-Recente': lc_recente,
+                'LC-Atual': lc_atual
+            }
+            
+            try:
+                input_data = prepare_input(form_data)
+                proba = model.predict_proba(input_data)[0][1]
+                
+                # Exibir resultados
+                st.success(f"Probabilidade de mau pagador: {proba:.2%}")
+                
+                # [...] Restante do código de exibição
+                
+            except Exception as e:
+                st.error(f"Erro na previsão: {str(e)}")
     # Interface do formulário
     with st.form("risk_form"):
         col1, col2 = st.columns(2)
