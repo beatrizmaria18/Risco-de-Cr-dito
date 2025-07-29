@@ -331,22 +331,45 @@ with tab3:
 elif selected_page == "⚙️ Simulador de Risco":
     st.title("⚙️ Simulador de Risco de Crédito")
     
-    # Função para preparar dados de entrada
+    # Função auxiliar dentro do bloco
     def prepare_input(form_data):
         input_df = pd.DataFrame([form_data])
-        
         # Feature engineering
         input_df['Risco_Atrasos'] = input_df['Atrasos'] * input_df['Negativos']
         input_df['Historico_Risco'] = input_df['TempoCliente'] / (input_df['Atrasos'] + 1e-6)
         input_df['Alavancagem'] = input_df['Empréstimo'] / (input_df['ValorDoBem'] + 0.001)
-        
-        # Garantir colunas necessárias
-        required_cols = ['Emprego', 'TempoEmprego', 'Finalidade', 'LC-Recente', 'LC-Atual']
-        for col in required_cols:
-            if col not in input_df.columns:
-                input_df[col] = 0  # Valor padrão
-                
         return input_df
+
+    # Formulário principal
+    with st.form(key='risk_form'):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            finalidade = st.selectbox("Finalidade", dados['Finalidade'].unique())
+            emprego = st.selectbox("Emprego", dados['Emprego'].unique())
+            emprestimo = st.number_input("Valor do Empréstimo (R$)", value=50000)
+            
+        with col2:
+            atrasos = st.number_input("Atrasos", value=0)
+            tempo_cliente = st.number_input("Tempo como Cliente (meses)", value=12)
+            
+        submitted = st.form_submit_button("Calcular Risco")
+        
+        if submitted:
+            try:
+                input_data = prepare_input({
+                    'Finalidade': finalidade,
+                    'Emprego': emprego,
+                    'Empréstimo': emprestimo,
+                    'Atrasos': atrasos,
+                    'TempoCliente': tempo_cliente
+                })
+                
+                proba = model.predict_proba(input_data)[0][1]
+                st.metric("Probabilidade de Risco", f"{proba:.1%}")
+                
+            except Exception as e:
+                st.error(f"Erro na simulação: {str(e)}")
 
     # Formulário
     with st.form("risk_form"):
