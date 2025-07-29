@@ -86,13 +86,8 @@ pages = {
 selected_page = st.sidebar.radio("Navegue pelas seções:", list(pages.keys()))
 st.sidebar.markdown("---")
 
-
-
-
-st.sidebar.markdown("---")
-
-# --- Navegação ---
-if dados is not None:
+# Filtros da Análise (apenas para páginas que usam dados)
+if selected_page in ["📊 Dashboard Geral", "📈 Análise Exploratória"]:
     st.sidebar.header("Filtros da Análise")
     selected_finalidade = st.sidebar.multiselect(
         "Filtrar por Finalidade",
@@ -103,16 +98,8 @@ if dados is not None:
 else:
     dados_filtrados = pd.DataFrame()
 
-pagina = st.sidebar.radio(
-    "Navegue pelas seções:",
-    ["📊 Dashboard Geral", "📈 Análise Exploratória", "🧠 Detalhes do Modelo", "⚙️ Simulador de Risco", "💼 Impacto no Negócio"]
-)
 st.sidebar.markdown("---")
 st.sidebar.info("Desenvolvido como uma ferramenta de suporte à decisão para análise de crédito.")
-
-# --- Verificação de Erro ---
-if model is None or dados is None:
-    st.stop()
 
 # --- Conteúdo das Páginas ---
 
@@ -160,16 +147,18 @@ if selected_page == "📊 Dashboard Geral":
         st.error(f"Erro ao calcular métricas: {str(e)}")
 
 # PÁGINA 2: ANÁLISE EXPLORATÓRIA
-elif pagina == "📈 Análise Exploratória":
+elif selected_page == "📈 Análise Exploratória":
     st.title("📈 Análise Exploratória Interativa")
     st.markdown("Explore as relações entre as variáveis do conjunto de dados filtrado.")
     
-    if dados is not None:
+    if not dados_filtrados.empty:
+        # Criar features consistentes com o modelo
         dados_filtrados['Risco_Atrasos'] = dados_filtrados['Atrasos'] * dados_filtrados['Negativos']
         dados_filtrados['Historico_Risco'] = dados_filtrados['TempoCliente'] / (dados_filtrados['Atrasos'] + 1)
         dados_filtrados['Alavancagem'] = dados_filtrados['Empréstimo'] / (dados_filtrados['ValorDoBem'] + 0.001)
     
     tab1, tab2, tab3 = st.tabs(["Análise Univariada", "Análise Bivariada", "Análise Categórica"])
+    
     with tab1:
         st.subheader("Análise de uma única variável numérica")
         num_cols = dados_filtrados.select_dtypes(include=np.number).columns.tolist()
@@ -177,6 +166,7 @@ elif pagina == "📈 Análise Exploratória":
         fig_hist = px.histogram(dados_filtrados, x=num_col_select, color='Cliente', marginal='box', 
                                title=f'Distribuição de {num_col_select} por tipo de cliente')
         st.plotly_chart(fig_hist, use_container_width=True)
+    
     with tab2:
         st.subheader("Relação entre duas variáveis numéricas")
         num_cols = dados_filtrados.select_dtypes(include=np.number).columns.tolist()
@@ -185,17 +175,21 @@ elif pagina == "📈 Análise Exploratória":
         fig_scatter = px.scatter(dados_filtrados, x=col_x, y=col_y, color='Cliente', 
                                title=f'{col_y} vs. {col_x}', hover_data=['Finalidade'])
         st.plotly_chart(fig_scatter, use_container_width=True)
+    
     with tab3:
         st.subheader("Análise de variáveis categóricas")
-        cat_col_select = st.selectbox("Selecione uma variável categórica:", 
-                                    options=dados_filtrados.select_dtypes(include='object').drop('Cliente', axis=1).columns)
-        fig_bar = px.bar(dados_filtrados.groupby([cat_col_select, 'Cliente']).size().reset_index(name='count'), 
-                        x=cat_col_select, y='count', color='Cliente', barmode='group', 
-                        title=f'Contagem por {cat_col_select} e tipo de cliente')
-        st.plotly_chart(fig_bar, use_container_width=True)
+        cat_cols = dados_filtrados.select_dtypes(include='object').drop('Cliente', axis=1, errors='ignore').columns
+        if len(cat_cols) > 0:
+            cat_col_select = st.selectbox("Selecione uma variável categórica:", options=cat_cols)
+            fig_bar = px.bar(dados_filtrados.groupby([cat_col_select, 'Cliente']).size().reset_index(name='count'), 
+                            x=cat_col_select, y='count', color='Cliente', barmode='group', 
+                            title=f'Contagem por {cat_col_select} e tipo de cliente')
+            st.plotly_chart(fig_bar, use_container_width=True)
+        else:
+            st.warning("Nenhuma variável categórica disponível para análise.")
 
 # PÁGINA 3: DETALHES DO MODELO
-elif pagina == "🧠 Detalhes do Modelo":
+elif selected_page == "🧠 Detalhes do Modelo":
     st.title("🧠 Análise Profunda do Modelo")
     st.markdown("Aqui exploramos o comportamento e a performance do modelo carregado.")
     
@@ -275,28 +269,32 @@ elif pagina == "🧠 Detalhes do Modelo":
     with tab3:
         st.subheader("Importância das Features")
         try:
-            importances = model.named_steps['classifier'].feature_importances_
-            feature_names = ['Empréstimo', 'ValorDoBem', 'TempoEmprego', 'Negativos', 
-                           'Atrasos', 'TempoCliente', 'LC-Recente', 'LC-Atual', 'RDS',
-                           'Risco_Atrasos', 'Historico_Risco', 'Alavancagem']
-            
-            # Adicionar nomes das features categóricas
-            categorical_features = ['Emprego', 'Finalidade']
-            ohe_features = model.named_steps['preprocessor'].transformers_[1][1]\
-                .named_steps['onehot'].get_feature_names_out(categorical_features)
-            feature_names.extend(ohe_features)
-            
-            importance_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
-            importance_df = importance_df.sort_values('Importance', ascending=False).head(20)
-            
-            fig = px.bar(
-                importance_df,
-                x='Importance',
-                y='Feature',
-                orientation='h',
-                title='Top 20 Features Mais Importantes'
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            # Verifica se o modelo tem feature_importances_
+            if hasattr(model.named_steps['classifier'], 'feature_importances_'):
+                importances = model.named_steps['classifier'].feature_importances_
+                feature_names = ['Empréstimo', 'ValorDoBem', 'TempoEmprego', 'Negativos', 
+                               'Atrasos', 'TempoCliente', 'LC-Recente', 'LC-Atual', 'RDS',
+                               'Risco_Atrasos', 'Historico_Risco', 'Alavancagem']
+                
+                # Adicionar nomes das features categóricas
+                categorical_features = ['Emprego', 'Finalidade']
+                ohe_features = model.named_steps['preprocessor'].transformers_[1][1]\
+                    .named_steps['onehot'].get_feature_names_out(categorical_features)
+                feature_names.extend(ohe_features)
+                
+                importance_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
+                importance_df = importance_df.sort_values('Importance', ascending=False).head(20)
+                
+                fig = px.bar(
+                    importance_df,
+                    x='Importance',
+                    y='Feature',
+                    orientation='h',
+                    title='Top 20 Features Mais Importantes'
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("O modelo não possui atributo feature_importances_")
         except Exception as e:
             st.warning(f"Não foi possível extrair a importância das features. Erro: {e}")
 
@@ -342,7 +340,9 @@ elif selected_page == "⚙️ Simulador de Risco":
                                           min_value=1, value=120)
             rds = st.slider("Renda Comprometida (RDS %)", 0.0, 100.0, 30.0)
         
-        if st.form_submit_button("Calcular Risco"):
+        submitted = st.form_submit_button("Calcular Risco")
+        
+        if submitted:
             form_data = {
                 'Finalidade': finalidade,
                 'Emprego': emprego,
@@ -401,7 +401,7 @@ elif selected_page == "⚙️ Simulador de Risco":
                 st.write("Dados enviados:", input_data)
 
 # PÁGINA 5: IMPACTO NO NEGÓCIO
-elif pagina == "💼 Impacto no Negócio":
+elif selected_page == "💼 Impacto no Negócio":
     st.title("💼 Calculadora de Impacto Financeiro")
     st.markdown("Estime o valor financeiro que o modelo pode economizar para a empresa.")
 
