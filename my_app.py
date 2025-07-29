@@ -343,7 +343,7 @@ elif selected_page == "⚙️ Simulador de Risco":
         # Garantir todas as colunas necessárias
         for col in ['Emprego', 'TempoEmprego', 'Finalidade', 'LC-Recente', 'LC-Atual']:
             if col not in input_df.columns:
-                input_df[col] = 0  # Ou valor padrão apropriado
+                input_df[col] = 0  # Valor padrão
                 
         # One-hot encoding manual
         for cat in dados['Finalidade'].unique():
@@ -362,22 +362,24 @@ elif selected_page == "⚙️ Simulador de Risco":
             finalidade = st.selectbox("Finalidade", dados['Finalidade'].unique())
             emprego = st.selectbox("Emprego", dados['Emprego'].unique())
             emprestimo = st.number_input("Valor do Empréstimo (R$)", 
-                                       min_value=1000, value=50000, step=1000)
+                                      min_value=1000, value=50000, step=1000)
             valor_bem = st.number_input("Valor do Bem (R$)", 
-                                      min_value=1000, value=100000, step=1000)
+                                     min_value=1000, value=100000, step=1000)
             tempo_emprego = st.number_input("Tempo no Emprego (meses)", 
-                                          min_value=0, value=24)
+                                         min_value=0, value=24)
             
         with col2:
             atrasos = st.number_input("Atrasos", min_value=0, value=0)
             negativos = st.number_input("Negativos", min_value=0, value=0)
             tempo_cliente = st.number_input("Tempo como Cliente (meses)", 
-                                          min_value=1, value=120)
+                                         min_value=1, value=120)
             rds = st.slider("Renda Comprometida (RDS %)", 0.0, 100.0, 30.0)
             lc_recente = st.number_input("LC Recente", min_value=0, value=0)
             lc_atual = st.number_input("LC Atual", min_value=0, value=0)
         
-        if st.form_submit_button("Calcular Risco"):
+        submitted = st.form_submit_button("Calcular Risco")
+        
+        if submitted:
             form_data = {
                 'Finalidade': finalidade,
                 'Emprego': emprego,
@@ -395,13 +397,7 @@ elif selected_page == "⚙️ Simulador de Risco":
             try:
                 input_data = prepare_input(form_data)
                 
-                # Verificar colunas faltantes
-                missing_cols = set(model.feature_names_in_) - set(input_data.columns)
-                if missing_cols:
-                    st.error(f"Colunas faltantes: {missing_cols}")
-                    st.stop()
-                
-                # Verificação final antes da previsão
+                # Verificar se o modelo tem predict_proba
                 if not hasattr(model, 'predict_proba'):
                     st.error("O modelo não possui método predict_proba()")
                     st.stop()
@@ -440,7 +436,6 @@ elif selected_page == "⚙️ Simulador de Risco":
                 
             except Exception as e:
                 st.error(f"Erro na previsão: {str(e)}")
-                st.write("Dados enviados:", input_data)
 
 # PÁGINA 5: IMPACTO NO NEGÓCIO
 elif selected_page == "💼 Impacto no Negócio":
