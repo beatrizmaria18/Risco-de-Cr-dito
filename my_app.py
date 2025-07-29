@@ -240,6 +240,94 @@ elif selected_page == "🧠 Detalhes do Modelo":
         precision_points, recall_points, thresholds = [0], [0], [0]
         recall, precision = 0.0, 0.0
 
+
+tab1, tab2, tab3 = st.tabs(["Matriz de Confusão", "Curvas de Performance", "Feature Importance"])
+    
+    with tab1:
+        st.subheader("Matriz de Confusão")
+        fig_cm = go.Figure(data=go.Heatmap(
+            z=cm,
+            x=['Previsto Bom', 'Previsto Mau'],
+            y=['Real Bom', 'Real Mau'],
+            colorscale='Greens',
+            text=[[str(x) for x in row] for row in cm],
+            texttemplate="%{text}",
+            hoverongaps=False
+        ))
+        fig_cm.update_layout(title='Matriz de Confusão com Limiar Ajustado')
+        st.plotly_chart(fig_cm, use_container_width=True)
+        
+        # Detalhes da matriz
+        tn, fp, fn, tp = cm.ravel()
+        st.markdown(f"""
+        - **Verdadeiros Positivos (TP):** {tp}
+        - **Falsos Positivos (FP):** {fp}
+        - **Falsos Negativos (FN):** {fn}
+        - **Verdadeiros Negativos (TN):** {tn}
+        """)
+    
+    with tab2:
+        st.subheader("Curva Precision-Recall")
+        fig_pr = go.Figure()
+        fig_pr.add_trace(go.Scatter(
+            x=recall_points,
+            y=precision_points,
+            mode='lines',
+            name='Curva PR'
+        ))
+        fig_pr.add_shape(
+            type='line',
+            x0=0, x1=1, y0=1, y1=0,
+            line=dict(color='RoyalBlue', width=2, dash='dot')
+        )
+        fig_pr.update_layout(
+            title='Curva Precision-Recall',
+            xaxis_title='Recall',
+            yaxis_title='Precision'
+        )
+        st.plotly_chart(fig_pr, use_container_width=True)
+        
+        st.subheader("Distribuição de Probabilidades")
+        fig_dist = px.histogram(
+            x=y_proba,
+            color=y_true.map({0: 'Bom Pagador', 1: 'Mau Pagador'}),
+            nbins=50,
+            labels={'x': 'Probabilidade de Mau Pagador', 'color': 'Classe Real'},
+            title='Distribuição das Probabilidades Previstas'
+        )
+        fig_dist.add_vline(x=OPTIMAL_THRESHOLD, line_dash="dash", line_color="red")
+        st.plotly_chart(fig_dist, use_container_width=True)
+    
+    with tab3:
+        st.subheader("Importância das Features")
+        try:
+            importances = model.named_steps['classifier'].feature_importances_
+            feature_names = ['Empréstimo', 'ValorDoBem', 'TempoEmprego', 'Negativos', 
+                           'Atrasos', 'TempoCliente', 'LC-Recente', 'LC-Atual', 'RDS',
+                           'Risco_Atrasos', 'Historico_Risco', 'Alavancagem']
+            
+            # Adicionar nomes das features categóricas
+            categorical_features = ['Emprego', 'Finalidade']
+            ohe_features = model.named_steps['preprocessor'].transformers_[1][1]\
+                .named_steps['onehot'].get_feature_names_out(categorical_features)
+            feature_names.extend(ohe_features)
+            
+            importance_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
+            importance_df = importance_df.sort_values('Importance', ascending=False).head(20)
+            
+            fig = px.bar(
+                importance_df,
+                x='Importance',
+                y='Feature',
+                orientation='h',
+                title='Top 20 Features Mais Importantes'
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        except Exception as e:
+            st.warning(f"Não foi possível extrair a importância das features. Erro: {e}")
+
+
+
 # PÁGINA 4: SIMULADOR DE RISCO
 elif selected_page == "⚙️ Simulador de Risco":
     st.title("⚙️ Simulador de Risco de Crédito")
@@ -253,6 +341,11 @@ elif selected_page == "⚙️ Simulador de Risco":
         input_df['Historico_Risco'] = input_df['TempoCliente'] / (input_df['Atrasos'] + 1e-6)
         input_df['Alavancagem'] = input_df['Empréstimo'] / (input_df['ValorDoBem'] + 0.001)
         
+        # Garantir todas as colunas necessárias
+        for col in ['Emprego', 'TempoEmprego', 'Finalidade', 'LC-Recente', 'LC-Atual']:
+            if col not in input_df.columns:
+                input_df[col] = 0  # Ou valor padrão apropriado
+                
         # One-hot encoding manual
         for cat in dados['Finalidade'].unique():
             input_df[f'Finalidade_{cat}'] = (input_df['Finalidade'] == cat).astype(int)
@@ -260,8 +353,7 @@ elif selected_page == "⚙️ Simulador de Risco":
         for cat in dados['Emprego'].unique():
             input_df[f'Emprego_{cat}'] = (input_df['Emprego'] == cat).astype(int)
         
-        # Remover colunas originais
-        return input_df.drop(['Finalidade', 'Emprego'], axis=1)
+        return input_df
 
     # Interface do formulário
     with st.form("risk_form"):
@@ -274,6 +366,8 @@ elif selected_page == "⚙️ Simulador de Risco":
                                        min_value=1000, value=50000, step=1000)
             valor_bem = st.number_input("Valor do Bem (R$)", 
                                       min_value=1000, value=100000, step=1000)
+            tempo_emprego = st.number_input("Tempo no Emprego (meses)", 
+                                          min_value=0, value=24)
             
         with col2:
             atrasos = st.number_input("Atrasos", min_value=0, value=0)
@@ -281,10 +375,10 @@ elif selected_page == "⚙️ Simulador de Risco":
             tempo_cliente = st.number_input("Tempo como Cliente (meses)", 
                                           min_value=1, value=120)
             rds = st.slider("Renda Comprometida (RDS %)", 0.0, 100.0, 30.0)
+            lc_recente = st.number_input("LC Recente", min_value=0, value=0)
+            lc_atual = st.number_input("LC Atual", min_value=0, value=0)
         
-        submitted = st.form_submit_button("Calcular Risco")
-        
-        if submitted:
+        if st.form_submit_button("Calcular Risco"):
             form_data = {
                 'Finalidade': finalidade,
                 'Emprego': emprego,
@@ -293,13 +387,20 @@ elif selected_page == "⚙️ Simulador de Risco":
                 'Atrasos': atrasos,
                 'Negativos': negativos,
                 'TempoCliente': tempo_cliente,
+                'TempoEmprego': tempo_emprego,
                 'RDS': rds,
-                'LC-Recente': 0,  # Valores padrão
-                'LC-Atual': 0
+                'LC-Recente': lc_recente,
+                'LC-Atual': lc_atual
             }
             
             try:
                 input_data = prepare_input(form_data)
+                
+                # Verificar colunas faltantes
+                missing_cols = set(model.feature_names_in_) - set(input_data.columns)
+                if missing_cols:
+                    st.error(f"Colunas faltantes: {missing_cols}")
+                    st.stop()
                 
                 # Verificação final antes da previsão
                 if not hasattr(model, 'predict_proba'):
