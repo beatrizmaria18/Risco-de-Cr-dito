@@ -341,7 +341,7 @@ elif selected_page == "⚙️ Simulador de Risco":
         return input_df
 
     # Formulário principal
-    with st.form("risk_form"):
+with st.form("risk_form"):
         col1, col2 = st.columns(2)
         
         with col1:
