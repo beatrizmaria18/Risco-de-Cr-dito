@@ -129,7 +129,7 @@ if selected_page == "📊 Dashboard Geral":
     
     try:
         if selected_page == "📊 Dashboard Geral":
-    st.title("📊 Dashboard do Modelo de Risco")
+            st.title("📊 Dashboard do Modelo de Risco")
     
     try:
         # Preparar dados para avaliação
