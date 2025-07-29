@@ -128,13 +128,9 @@ if selected_page == "📊 Dashboard Geral":
     st.title("📊 Dashboard do Modelo de Risco")
     
     try:
-        if selected_page == "📊 Dashboard Geral":
-            st.title("📊 Dashboard do Modelo de Risco")
-    
-    try:
         # Preparar dados para avaliação
         X = dados.drop('Cliente', axis=1)
-        X = prepare_features(X)  # Adicionar esta linha
+        X = prepare_features(X)  # Adicionar features extras
         
         y_true = dados['Cliente'].map({'bom pagador': 0, 'mau pagador': 1})
         
@@ -145,10 +141,6 @@ if selected_page == "📊 Dashboard Geral":
             
         y_proba = model.predict_proba(X)[:, 1]
         y_pred = (y_proba >= OPTIMAL_THRESHOLD).astype(int)
-
-        except Exception as e:
-          st.error(f"Erro ao preparar dados para avaliação: {str(e)}")
-          st.stop()
         
         # Calcular métricas
         recall = recall_score(y_true, y_pred)
@@ -165,16 +157,20 @@ if selected_page == "📊 Dashboard Geral":
                       help="Percentual total de acertos")
         
         # Gráfico de distribuição
-        fig = px.pie(
-            dados['Cliente'].value_counts().reset_index(),
-            values='count',
-            names='Cliente',
-            title='Distribuição de Clientes'
-        )
-        st.plotly_chart(fig, use_container_width=True)
-        
+        try:
+            fig = px.pie(
+                dados['Cliente'].value_counts().reset_index(),
+                values='count',
+                names='Cliente',
+                title='Distribuição de Clientes'
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        except Exception as e:
+            st.error(f"Erro ao gerar gráfico: {str(e)}")
+
     except Exception as e:
         st.error(f"Erro ao calcular métricas: {str(e)}")
+        st.stop()
 
 # PÁGINA 2: ANÁLISE EXPLORATÓRIA
 elif selected_page == "📈 Análise Exploratória":
